@@ -1,22 +1,31 @@
 /**
  * litlapse · state.js
  * --------------------------------------------------------------
- * Fuente única de verdad de la partida. Encapsula las invariantes
- * del juego y emite eventos al motor del DOM mediante callbacks.
+ * Fuente única de verdad. Mecánica deductiva letra-a-letra
+ * (estilo Wordle dentro del fragmento):
  *
- * Vidas: arrancan en 6. Cada error global descuenta una. Llegando
- * a 0, la partida pasa a 'DERROTA' (irrecuperable hasta mañana).
- *
- * Avance automático: tras un acierto, el `activeIndex` salta a la
- * siguiente posición pendiente (en orden de aparición). Si no quedan,
- * la partida pasa a 'VICTORIA' y se sella `finishedAt`.
+ *  - Cada palabra oculta se juega independientemente, con un tope
+ *    de INTENTOS_POR_PALABRA tentativas para descubrirla.
+ *  - El intento debe coincidir en LONGITUD con la palabra oculta
+ *    activa; si no, se rechaza sin consumir intento.
+ *  - Las letras del intento que coinciden POSICIÓN-A-POSICIÓN con
+ *    la correcta quedan fijadas. Cuando todas están fijadas, el
+ *    slot está resuelto y el foco salta al siguiente.
+ *  - Si una letra del intento existe en la palabra correcta pero
+ *    no en esa posición, se acumula en `contiene` (el susurro).
+ *  - Las palabras incorrectas se acumulan en el cementerio.
+ *  - Pista de regalo: la primera letra de cada palabra oculta
+ *    arranca ya fijada. Reduce el espacio de búsqueda sin tocar
+ *    el límite de intentos.
+ *  - Agotar los intentos de cualquier palabra → DERROTA.
+ *  - Completar las tres palabras → VICTORIA.
  * --------------------------------------------------------------
  */
 (function (global) {
   'use strict';
 
   const { Utils, Storage } = global.Litlapse;
-  const MAX_ERRORES = 6;
+  const INTENTOS_POR_PALABRA = 6;
 
   const STATUS = Object.freeze({
     JUGANDO: 'JUGANDO',
@@ -24,12 +33,29 @@
     DERROTA: 'DERROTA'
   });
 
+  // Tipos de resultado devueltos por `intentar()`:
+  //   LARGO_INVALIDO  → el intento no coincide en largo (no consume intento)
+  //   PARCIAL         → intento procesado; el slot aún no está completo
+  //   COMPLETADA      → el slot quedó resuelto (puede coincidir con VICTORIA)
+  //   AGOTADA         → se gastó el último intento sin completar → DERROTA
+  //   IGNORADO        → entrada vacía o partida ya terminada
+
+  /** Devuelve las letras canónicas (con tildes/mayúsculas) de una palabra. */
+  function letrasCanonicas(palabra) {
+    return Array.from(String(palabra || ''));
+  }
+
+  /** Devuelve las letras normalizadas (lowercase, sin diacríticos) para comparar. */
+  function letrasNormalizadas(palabra) {
+    return Array.from(Utils.normalize(palabra));
+  }
+
   class GameState {
     /**
      * @param {object} puzzle  Puzzle del día (forma estricta documentada en puzzles.js).
      * @param {object} [opts]
-     * @param {boolean} [opts.autosave=true]  Persistir tras cada mutación.
-     * @param {(s: GameState) => void} [opts.onChange]  Notificación post-mutación.
+     * @param {boolean} [opts.autosave=true]
+     * @param {(s: GameState) => void} [opts.onChange]
      */
     constructor(puzzle, opts = {}) {
       if (!puzzle || !Array.isArray(puzzle.palabrasOcultas)) {
@@ -50,48 +76,74 @@
     // ──────────────────────────── ciclo de vida ──
 
     _iniciarLimpio() {
-      const total = this.puzzle.palabrasOcultas.length;
       this.puzzleId = this.puzzle.id;
       this.fecha = this.puzzle.fecha;
-      this.encontradas = new Array(total).fill(false);
+      this.slots = this.puzzle.palabrasOcultas.map((p) => this._crearSlot(p));
       this.activeIndex = 0;
-      this.intentosPorPalabra = new Array(total).fill(0).map(() => []);
       this.cementerio = [];
-      this.vidas = MAX_ERRORES;
       this.pistasUsadas = 0;
       this.status = STATUS.JUGANDO;
       this.startedAt = Date.now();
       this.finishedAt = null;
     }
 
+    _crearSlot(palabraOculta) {
+      const canon = letrasCanonicas(palabraOculta.palabraCorrecta);
+      const norm = letrasNormalizadas(palabraOculta.palabraCorrecta);
+      // Pista de regalo: primera posición fijada al arrancar.
+      const fijadas = new Array(canon.length).fill(false);
+      if (canon.length > 0) fijadas[0] = true;
+      return {
+        canon,             // letras canónicas para renderizar
+        norm,              // letras normalizadas para comparar
+        fijadas,           // boolean[] por posición
+        contiene: [],      // letras (normalizadas) presentes pero descolocadas
+        intentos: 0,
+        completada: false
+      };
+    }
+
     _rehidratar(s) {
       this.puzzleId = s.puzzleId;
       this.fecha = s.fecha;
-      this.encontradas = Array.isArray(s.encontradas) ? s.encontradas.slice() : [];
+      this.slots = Array.isArray(s.slots)
+        ? s.slots.map((slot, i) => this._rehidratarSlot(slot, this.puzzle.palabrasOcultas[i]))
+        : this.puzzle.palabrasOcultas.map((p) => this._crearSlot(p));
       this.activeIndex = typeof s.activeIndex === 'number' ? s.activeIndex : 0;
-      this.intentosPorPalabra = Array.isArray(s.intentosPorPalabra)
-        ? s.intentosPorPalabra.map((xs) => (Array.isArray(xs) ? xs.slice() : []))
-        : [];
       this.cementerio = Array.isArray(s.cementerio) ? s.cementerio.slice() : [];
-      this.vidas = typeof s.vidas === 'number' ? s.vidas : MAX_ERRORES;
       this.pistasUsadas = typeof s.pistasUsadas === 'number' ? s.pistasUsadas : 0;
       this.status = s.status === STATUS.VICTORIA || s.status === STATUS.DERROTA
-        ? s.status
-        : STATUS.JUGANDO;
+        ? s.status : STATUS.JUGANDO;
       this.startedAt = s.startedAt || Date.now();
       this.finishedAt = s.finishedAt || null;
 
-      // Si en disco quedó como JUGANDO pero por consistencia ya está terminada,
-      // sellamos el estado correcto sin esperar a la próxima mutación.
+      // Reasentar el estado si quedó inconsistente en disco.
       if (this.status === STATUS.JUGANDO) {
-        if (this.encontradas.every(Boolean)) {
+        if (this.slots.every((sl) => sl.completada)) {
           this.status = STATUS.VICTORIA;
           this.finishedAt = this.finishedAt || Date.now();
-        } else if (this.vidas <= 0) {
+        } else if (this.slots.some((sl) => !sl.completada && sl.intentos >= INTENTOS_POR_PALABRA)) {
           this.status = STATUS.DERROTA;
           this.finishedAt = this.finishedAt || Date.now();
         }
       }
+    }
+
+    _rehidratarSlot(saved, palabraOculta) {
+      // Si el shape no encaja con el puzzle actual, recrear limpio.
+      if (!saved || !palabraOculta) return this._crearSlot(palabraOculta);
+      const fresco = this._crearSlot(palabraOculta);
+      if (saved.canon && saved.canon.length === fresco.canon.length) {
+        fresco.fijadas = Array.isArray(saved.fijadas)
+          ? saved.fijadas.slice(0, fresco.canon.length)
+          : fresco.fijadas;
+        // Garantizar la pista de regalo si por algún motivo cayó.
+        if (fresco.canon.length > 0 && !fresco.fijadas[0]) fresco.fijadas[0] = true;
+        fresco.contiene = Array.isArray(saved.contiene) ? saved.contiene.slice() : [];
+        fresco.intentos = typeof saved.intentos === 'number' ? saved.intentos : 0;
+        fresco.completada = !!saved.completada || fresco.fijadas.every(Boolean);
+      }
+      return fresco;
     }
 
     _esEstadoValido(s, puzzle) {
@@ -99,94 +151,130 @@
         s &&
         s.puzzleId === puzzle.id &&
         s.fecha === puzzle.fecha &&
-        Array.isArray(s.encontradas) &&
-        s.encontradas.length === puzzle.palabrasOcultas.length
+        Array.isArray(s.slots) &&
+        s.slots.length === puzzle.palabrasOcultas.length
       );
     }
 
     // ──────────────────────────── consultas ──
 
-    get totalPalabras() { return this.puzzle.palabrasOcultas.length; }
-    get aciertos() { return this.encontradas.filter(Boolean).length; }
-    get errores() { return MAX_ERRORES - this.vidas; }
+    get totalPalabras() { return this.slots.length; }
+    get aciertos() { return this.slots.filter((s) => s.completada).length; }
     get totalIntentos() {
-      return this.intentosPorPalabra.reduce((acc, xs) => acc + xs.length, 0);
+      return this.slots.reduce((acc, s) => acc + s.intentos, 0);
     }
     get terminada() { return this.status !== STATUS.JUGANDO; }
+    get slotActivo() {
+      if (this.terminada) return null;
+      return this.slots[this.activeIndex] || null;
+    }
+    get largoEsperado() {
+      const s = this.slotActivo;
+      return s ? s.canon.length : 0;
+    }
+    get intentosRestantes() {
+      const s = this.slotActivo;
+      return s ? Math.max(0, INTENTOS_POR_PALABRA - s.intentos) : 0;
+    }
     get palabraActiva() {
+      // Compat: algunos consumidores miran `palabraCorrecta` para pistas.
       if (this.terminada) return null;
       return this.puzzle.palabrasOcultas[this.activeIndex] || null;
     }
 
     // ──────────────────────────── mutaciones ──
 
-    /**
-     * Procesa un intento del usuario. Devuelve un objeto descriptivo:
-     *   { tipo: 'ACIERTO' | 'ERROR' | 'IGNORADO',
-     *     palabraIndex, palabraIngresada, motivo? }
-     */
     intentar(palabraIngresada) {
-      if (this.terminada) {
-        return { tipo: 'IGNORADO', motivo: 'partida terminada' };
-      }
+      if (this.terminada) return { tipo: 'IGNORADO', motivo: 'partida terminada' };
+      const slot = this.slotActivo;
+      if (!slot) return { tipo: 'IGNORADO', motivo: 'sin slot activo' };
+
       const limpia = Utils.normalize(palabraIngresada);
-      if (!limpia) {
-        return { tipo: 'IGNORADO', motivo: 'entrada vacía' };
-      }
-      const activa = this.palabraActiva;
-      if (!activa) {
-        return { tipo: 'IGNORADO', motivo: 'sin palabra activa' };
+      if (!limpia) return { tipo: 'IGNORADO', motivo: 'entrada vacía' };
+
+      const letrasIntento = Array.from(limpia);
+      if (letrasIntento.length !== slot.norm.length) {
+        return {
+          tipo: 'LARGO_INVALIDO',
+          motivo: `Esperado ${slot.norm.length} letras, recibí ${letrasIntento.length}.`,
+          largoEsperado: slot.norm.length,
+          largoRecibido: letrasIntento.length
+        };
       }
 
-      const idx = this.activeIndex;
-      this.intentosPorPalabra[idx].push(limpia);
+      slot.intentos += 1;
 
-      const objetivo = Utils.normalize(activa.palabraCorrecta);
-      if (limpia === objetivo) {
-        this.encontradas[idx] = true;
-        this._avanzarActiva();
-        if (this.encontradas.every(Boolean)) {
+      const posicionesFijadasAhora = [];
+      const letrasNuevasContiene = [];
+
+      // Pasada de coincidencias por posición.
+      for (let i = 0; i < slot.norm.length; i++) {
+        if (letrasIntento[i] === slot.norm[i] && !slot.fijadas[i]) {
+          slot.fijadas[i] = true;
+          posicionesFijadasAhora.push(i);
+        }
+      }
+
+      // Pasada de letras descolocadas (presentes en otra posición).
+      // Una letra entra en `contiene` si: (a) el jugador la propuso fuera de
+      // su sitio, y (b) todavía existe alguna ocurrencia de esa letra en la
+      // palabra que NO esté ya fijada. Sin la segunda condición, el susurro
+      // anunciaría letras que ya se ven en el fragmento.
+      for (let i = 0; i < letrasIntento.length; i++) {
+        const ch = letrasIntento[i];
+        if (letrasIntento[i] === slot.norm[i]) continue;
+        const existeNoFijada = slot.norm.some((c, k) => c === ch && !slot.fijadas[k]);
+        if (existeNoFijada && !slot.contiene.includes(ch)) {
+          slot.contiene.push(ch);
+          letrasNuevasContiene.push(ch);
+        }
+      }
+
+      // ¿Quedó completa la palabra (sea por coincidencia total o por
+      // acumulación de letras correctas a lo largo de intentos)?
+      const completada = slot.fijadas.every(Boolean);
+      if (completada) {
+        slot.completada = true;
+        this._avanzarSlot();
+        if (this.slots.every((s) => s.completada)) {
           this.status = STATUS.VICTORIA;
           this.finishedAt = Date.now();
         }
         this._persistirYNotificar();
-        return { tipo: 'ACIERTO', palabraIndex: idx, palabraIngresada: limpia };
-      }
-
-      this.cementerio.push(limpia);
-      this.vidas = Math.max(0, this.vidas - 1);
-      if (this.vidas === 0) {
-        this.status = STATUS.DERROTA;
-        this.finishedAt = Date.now();
-      }
-      this._persistirYNotificar();
-      return { tipo: 'ERROR', palabraIndex: idx, palabraIngresada: limpia };
-    }
-
-    /**
-     * Auxilio: registra una pista usada y devuelve su contenido. El motor
-     * decide cómo renderizarla.
-     *   modo = 'inicial'   → primera letra de la palabra activa.
-     *   modo = 'diccionario' (por defecto) → glosa breve.
-     */
-    pedirPista(modo = 'diccionario') {
-      if (this.terminada) return null;
-      const activa = this.palabraActiva;
-      if (!activa) return null;
-
-      this.pistasUsadas += 1;
-      this._persistirYNotificar();
-
-      if (modo === 'inicial') {
         return {
-          modo,
-          contenido: (activa.palabraCorrecta || '').charAt(0)
+          tipo: 'COMPLETADA',
+          slotIndex: this.activeIndex,
+          posicionesFijadasAhora,
+          letrasNuevasContiene
         };
       }
-      return { modo: 'diccionario', contenido: activa.pistaDiccionario || '' };
+
+      // Intento fallido: al cementerio (sin duplicar).
+      if (!this.cementerio.includes(limpia)) this.cementerio.push(limpia);
+
+      if (slot.intentos >= INTENTOS_POR_PALABRA) {
+        this.status = STATUS.DERROTA;
+        this.finishedAt = Date.now();
+        this._persistirYNotificar();
+        return { tipo: 'AGOTADA', posicionesFijadasAhora, letrasNuevasContiene };
+      }
+
+      this._persistirYNotificar();
+      return { tipo: 'PARCIAL', posicionesFijadasAhora, letrasNuevasContiene };
     }
 
-    /** Reinicia la partida (uso interno / debug). */
+    pedirPista(modo = 'diccionario') {
+      if (this.terminada) return null;
+      const pal = this.palabraActiva;
+      if (!pal) return null;
+      this.pistasUsadas += 1;
+      this._persistirYNotificar();
+      if (modo === 'inicial') {
+        return { modo, contenido: (pal.palabraCorrecta || '').charAt(0) };
+      }
+      return { modo: 'diccionario', contenido: pal.pistaDiccionario || '' };
+    }
+
     reiniciar() {
       this._iniciarLimpio();
       this._persistirYNotificar();
@@ -194,14 +282,14 @@
 
     // ──────────────────────────── internos ──
 
-    _avanzarActiva() {
-      for (let i = 0; i < this.encontradas.length; i++) {
-        if (!this.encontradas[i]) {
+    _avanzarSlot() {
+      for (let i = 0; i < this.slots.length; i++) {
+        if (!this.slots[i].completada) {
           this.activeIndex = i;
           return;
         }
       }
-      this.activeIndex = this.encontradas.length - 1;
+      this.activeIndex = this.slots.length - 1;
     }
 
     _persistirYNotificar() {
@@ -211,16 +299,19 @@
       }
     }
 
-    /** Foto JSON-segura para persistir o serializar. */
     snapshot() {
       return {
         puzzleId: this.puzzleId,
         fecha: this.fecha,
-        encontradas: this.encontradas.slice(),
+        slots: this.slots.map((s) => ({
+          canon: s.canon.slice(),
+          fijadas: s.fijadas.slice(),
+          contiene: s.contiene.slice(),
+          intentos: s.intentos,
+          completada: s.completada
+        })),
         activeIndex: this.activeIndex,
-        intentosPorPalabra: this.intentosPorPalabra.map((xs) => xs.slice()),
         cementerio: this.cementerio.slice(),
-        vidas: this.vidas,
         pistasUsadas: this.pistasUsadas,
         status: this.status,
         startedAt: this.startedAt,
@@ -230,5 +321,5 @@
   }
 
   global.Litlapse = global.Litlapse || {};
-  global.Litlapse.State = { GameState, STATUS, MAX_ERRORES };
+  global.Litlapse.State = { GameState, STATUS, INTENTOS_POR_PALABRA };
 })(typeof window !== 'undefined' ? window : globalThis);

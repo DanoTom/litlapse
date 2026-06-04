@@ -1,44 +1,36 @@
 /**
  * litlapse · engine.js
  * --------------------------------------------------------------
- * Motor de presentación. Conecta el estado de juego con el DOM:
- * renderiza el fragmento, mantiene el input fantasma, gestiona
- * la pulsación de Enter, anima los aciertos y resuelve las
- * pantallas de victoria/derrota.
+ * Motor de presentación. Render del fragmento como casilleros de
+ * letras (slots) y conexión con el estado deductivo.
  *
  * Selectores que espera (todos opcionales: si no están, se ignoran):
  *
- *   [data-litlapse="fragment"]    contenedor del párrafo con elipsis
- *   [data-litlapse="input"]       <input> de texto
- *   [data-litlapse="form"]        <form> que envuelve al input (opcional)
- *   [data-litlapse="graveyard"]   contenedor del cementerio (<ul> o <div>)
- *   [data-litlapse="lives"]       contador de vidas restantes
- *   [data-litlapse="attempts"]    contador de intentos
- *   [data-litlapse="found"]       contador de palabras encontradas (n/3)
- *   [data-litlapse="hint-btn"]    botón de auxilio
- *   [data-litlapse="hint-out"]    contenedor donde aparece la pista
- *   [data-litlapse="share-btn"]   botón de compartir (sólo en victoria)
- *   [data-litlapse="share-out"]   feedback "copiado al portapapeles"
- *   [data-litlapse="screen-play"] pantalla "jugando"
- *   [data-litlapse="screen-win"]  pantalla "eclipse resuelto"
- *   [data-litlapse="screen-lose"] pantalla "derrota"
- *   [data-litlapse="attribution"] bloque autor/obra/año (postal/victoria)
+ *   [data-litlapse="fragment"]       contenedor del párrafo con elipsis
+ *   [data-litlapse="input"]          <input> de texto
+ *   [data-litlapse="form"]           <form> que envuelve al input
+ *   [data-litlapse="susurro"]        contenedor de letras descolocadas
+ *   [data-litlapse="graveyard"]      contenedor del cementerio
+ *   [data-litlapse="attempts"]       intento global (suma de todos)
+ *   [data-litlapse="found"]          palabras halladas (n/3)
+ *   [data-litlapse="word-attempts"]  intentos en la palabra activa (k/6)
+ *   [data-litlapse="hint-btn"]       botón de pista (diccionario)
+ *   [data-litlapse="hint-out"]       contenedor donde aparece la pista
+ *   [data-litlapse="share-btn"]      botón de compartir (victoria)
+ *   [data-litlapse="share-out"]      feedback "copiado al portapapeles"
+ *   [data-litlapse="screen-play"]    pantalla "jugando"
+ *   [data-litlapse="screen-win"]     pantalla "eclipse resuelto"
+ *   [data-litlapse="screen-lose"]    pantalla "derrota"
+ *   [data-litlapse="attribution"]    bloque autor/obra/año
  * --------------------------------------------------------------
  */
 (function (global) {
   'use strict';
 
   const { Utils, Share } = global.Litlapse;
-  const { STATUS } = global.Litlapse.State;
+  const { STATUS, INTENTOS_POR_PALABRA } = global.Litlapse.State;
 
   class GameEngine {
-    /**
-     * @param {object} puzzle
-     * @param {GameState} state
-     * @param {object} [opts]
-     * @param {Document|HTMLElement} [opts.root=document]  Raíz para los queries.
-     * @param {'inicial'|'diccionario'} [opts.modoPista='diccionario']
-     */
     constructor(puzzle, state, opts = {}) {
       this.puzzle = puzzle;
       this.state = state;
@@ -48,10 +40,14 @@
       this.els = this._querySelectores();
       this.tokens = Utils.tokenize(puzzle.textoOriginal);
 
-      // El estado avisará al motor en cada mutación.
+      // Posiciones recién fijadas en el último intento: el render las usa
+      // para gatillar la animación de fade-in sólo en esas letras.
+      this._fijadasFrescas = new Map(); // slotIndex → Set<posición>
+
       this.state.onChange = () => this.render();
 
       this._enlazarEventos();
+      this._ajustarInputAlSlot();
       this.render();
       this._enfocarInput();
     }
@@ -60,14 +56,17 @@
 
     _querySelectores() {
       const $ = (sel) => this.root.querySelector(sel);
+      const $$ = (sel) => Array.from(this.root.querySelectorAll(sel));
       return {
         fragment: $('[data-litlapse="fragment"]'),
+        fragmentsTodos: $$('[data-litlapse="fragment"]'),
         input: $('[data-litlapse="input"]'),
         form: $('[data-litlapse="form"]'),
+        susurro: $('[data-litlapse="susurro"]'),
         graveyard: $('[data-litlapse="graveyard"]'),
-        lives: $('[data-litlapse="lives"]'),
         attempts: $('[data-litlapse="attempts"]'),
         found: $('[data-litlapse="found"]'),
+        wordAttempts: $('[data-litlapse="word-attempts"]'),
         hintBtn: $('[data-litlapse="hint-btn"]'),
         hintOut: $('[data-litlapse="hint-out"]'),
         shareBtn: $('[data-litlapse="share-btn"]'),
@@ -120,17 +119,37 @@
       const valor = input.value;
       const resultado = this.state.intentar(valor);
 
-      if (resultado.tipo === 'ACIERTO') {
-        input.value = '';
-        // El render ya ocurre por onChange; sólo agregamos el efecto vibratorio inverso (none).
-        this._enfocarInput();
-      } else if (resultado.tipo === 'ERROR') {
+      if (resultado.tipo === 'LARGO_INVALIDO') {
+        // No consume intento; sólo vibra para indicar el rechazo.
         this._vibrar(input);
+        this._mensajeBreve(resultado.motivo);
+        return;
+      }
+
+      if (resultado.tipo === 'COMPLETADA') {
+        this._registrarFijadas(resultado.slotIndex, resultado.posicionesFijadasAhora);
         input.value = '';
         this._enfocarInput();
-      } else {
-        input.value = '';
+        return;
       }
+
+      if (resultado.tipo === 'PARCIAL' || resultado.tipo === 'AGOTADA') {
+        this._registrarFijadas(this.state.activeIndex, resultado.posicionesFijadasAhora);
+        if (!resultado.posicionesFijadasAhora.length) this._vibrar(input);
+        input.value = '';
+        this._enfocarInput();
+        return;
+      }
+
+      // IGNORADO u otros: limpiar y seguir.
+      input.value = '';
+    }
+
+    _registrarFijadas(slotIndex, posiciones) {
+      if (!posiciones || !posiciones.length) return;
+      let set = this._fijadasFrescas.get(slotIndex);
+      if (!set) { set = new Set(); this._fijadasFrescas.set(slotIndex, set); }
+      posiciones.forEach((p) => set.add(p));
     }
 
     _vibrar(el) {
@@ -149,13 +168,31 @@
       );
     }
 
+    _mensajeBreve(texto) {
+      const out = this.els.hintOut;
+      if (!out || !texto) return;
+      out.textContent = texto;
+      out.classList.add('is-visible');
+    }
+
     _enfocarInput() {
       const input = this.els.input;
       if (!input || this.state.terminada) return;
-      // Defer al siguiente tick para no pelearse con el render del navegador.
       global.requestAnimationFrame(() => {
         try { input.focus({ preventScroll: true }); } catch (_e) { input.focus(); }
       });
+    }
+
+    _ajustarInputAlSlot() {
+      const input = this.els.input;
+      if (!input) return;
+      const largo = this.state.largoEsperado;
+      if (largo > 0) {
+        input.maxLength = largo;
+        input.style.width = `${Math.max(largo, 4)}ch`;
+        input.setAttribute('aria-label',
+          `Escribe la palabra de ${largo} letras y pulsa Enter`);
+      }
     }
 
     _mostrarPista() {
@@ -163,11 +200,9 @@
       const pista = this.state.pedirPista(this.modoPista);
       if (!pista || !this.els.hintOut) return;
       const out = this.els.hintOut;
-      if (pista.modo === 'inicial') {
-        out.textContent = `Comienza con la letra «${pista.contenido}».`;
-      } else {
-        out.textContent = pista.contenido;
-      }
+      out.textContent = pista.modo === 'inicial'
+        ? `Comienza con la letra «${pista.contenido}».`
+        : pista.contenido;
       out.classList.add('is-visible');
     }
 
@@ -177,7 +212,9 @@
       const ok = await Share.copiar(texto);
       const out = this.els.shareOut;
       if (out) {
-        out.textContent = ok ? 'Copiado al portapapeles.' : 'No se pudo copiar. Copia manual:\n' + texto;
+        out.textContent = ok
+          ? 'Copiado al portapapeles.'
+          : 'No se pudo copiar. Copia manual:\n' + texto;
         out.classList.add('is-visible');
       }
     }
@@ -187,10 +224,15 @@
     render() {
       this._renderPantalla();
       this._renderFragmento();
+      this._renderSusurro();
       this._renderCementerio();
       this._renderContadores();
       this._renderAtribucion();
       this._renderBotonesEstado();
+      this._ajustarInputAlSlot();
+      // Limpiar el set de fijadas frescas DESPUÉS de renderizar; así
+      // el próximo render no vuelve a animar las mismas letras.
+      this._fijadasFrescas = new Map();
     }
 
     _renderPantalla() {
@@ -207,10 +249,9 @@
     }
 
     _renderFragmento() {
-      const host = this.els.fragment;
-      if (!host) return;
+      const hosts = this.els.fragmentsTodos;
+      if (!hosts || !hosts.length) return;
 
-      // Mapa indicePalabra → palabraOculta para lookup O(1).
       const ocultas = new Map();
       this.puzzle.palabrasOcultas.forEach((p, slot) => {
         ocultas.set(p.indicePalabra, { ...p, slot });
@@ -218,37 +259,75 @@
 
       const partes = this.tokens.map((token, i) => {
         if (!ocultas.has(i)) return Utils.escapeHtml(token);
-
         const oculta = ocultas.get(i);
-        const { prefijo, raiz, sufijo } = Utils.splitPunctuation(token);
-        const encontrada = this.state.encontradas[oculta.slot];
-        const esActiva = !this.state.terminada && oculta.slot === this.state.activeIndex;
-        const reveladaPorVictoria = this.state.status === STATUS.VICTORIA;
-        const reveladaPorDerrota = this.state.status === STATUS.DERROTA;
-
+        const { prefijo, sufijo } = Utils.splitPunctuation(token);
         const safePre = Utils.escapeHtml(prefijo);
         const safeSuf = Utils.escapeHtml(sufijo);
-        const safeRaiz = Utils.escapeHtml(raiz || oculta.palabraCorrecta);
-
-        if (encontrada || reveladaPorVictoria) {
-          const cls = encontrada && this.state.status === STATUS.JUGANDO
-            ? 'litlapse-revealed reveal'
-            : 'litlapse-revealed';
-          return `${safePre}<span class="${cls}" data-slot="${oculta.slot}">${safeRaiz}</span>${safeSuf}`;
-        }
-
-        if (reveladaPorDerrota) {
-          // En derrota mostramos las omitidas tachadas en su sitio.
-          return `${safePre}<span class="litlapse-failed">${safeRaiz}</span>${safeSuf}`;
-        }
-
-        const widthEm = Utils.elipsisWidthEm(oculta.palabraCorrecta);
-        const klass = esActiva ? 'elipsis active' : 'elipsis';
-        const aria = `palabra ${oculta.slot + 1} de ${this.puzzle.palabrasOcultas.length}`;
-        return `${safePre}<span class="${klass}" data-slot="${oculta.slot}" style="width:${widthEm}em" aria-label="${aria}">&nbsp;</span>${safeSuf}`;
+        const dentro = this._renderElipsis(oculta.slot);
+        return `${safePre}${dentro}${safeSuf}`;
       });
 
-      host.innerHTML = partes.join(' ');
+      const html = partes.join(' ');
+      hosts.forEach((host) => { host.innerHTML = html; });
+    }
+
+    _renderElipsis(slotIndex) {
+      const slot = this.state.slots[slotIndex];
+      const status = this.state.status;
+      const esActiva = !this.state.terminada && slotIndex === this.state.activeIndex;
+      const frescas = this._fijadasFrescas.get(slotIndex) || new Set();
+      const aria = `palabra ${slotIndex + 1} de ${this.state.totalPalabras}`;
+
+      // Derrota con palabra sin completar: revelar tachado en italic.
+      if (status === STATUS.DERROTA && !slot.completada) {
+        const texto = Utils.escapeHtml(slot.canon.join(''));
+        return `<span class="elipsis revelada-fallida" data-slot="${slotIndex}" aria-label="${aria}">${texto}</span>`;
+      }
+
+      const clases = ['elipsis'];
+      if (esActiva) clases.push('active');
+      if (slot.completada) clases.push('completada');
+      if (status === STATUS.VICTORIA) clases.push('en-victoria');
+
+      const letras = slot.canon.map((letraCanon, pos) => {
+        const fijada = slot.fijadas[pos];
+        if (!fijada) {
+          return `<span class="letra-slot vacia" aria-hidden="true"></span>`;
+        }
+        const recien = frescas.has(pos);
+        const cls = recien ? 'letra-slot fijada nueva' : 'letra-slot fijada';
+        return `<span class="${cls}">${Utils.escapeHtml(letraCanon)}</span>`;
+      }).join('');
+
+      return `<span class="${clases.join(' ')}" data-slot="${slotIndex}" aria-label="${aria}">${letras}</span>`;
+    }
+
+    _renderSusurro() {
+      const host = this.els.susurro;
+      if (!host) return;
+      const slot = this.state.slotActivo;
+      if (!slot || this.state.terminada) {
+        host.textContent = '';
+        host.classList.remove('is-visible');
+        return;
+      }
+      // Filtrar: si todas las ocurrencias de una letra ya están fijadas
+      // en el fragmento, no la susurramos (ya se ve).
+      const vigentes = slot.contiene.filter((ch) =>
+        slot.norm.some((c, k) => c === ch && !slot.fijadas[k])
+      );
+      if (!vigentes.length) {
+        host.textContent = '';
+        host.classList.remove('is-visible');
+        return;
+      }
+      const letras = vigentes
+        .slice()
+        .sort()
+        .map((c) => Utils.escapeHtml(c.toUpperCase()))
+        .join(', ');
+      host.innerHTML = `Contiene: <strong>${letras}</strong>`;
+      host.classList.add('is-visible');
     }
 
     _renderCementerio() {
@@ -260,18 +339,36 @@
         host.classList.remove('is-populated');
         return;
       }
-      const items = palabras
-        .map((w) => `<span>${Utils.escapeHtml(w)}</span>`)
-        .join('');
+      // Para opacar letras inexistentes usamos la palabra activa como
+      // referencia. Al avanzar de slot, la categorización se recalcula
+      // automáticamente en el próximo render.
+      const slotRef = this.state.slotActivo;
+      const setObjetivo = slotRef
+        ? new Set(slotRef.norm)
+        : null;
+
+      const items = palabras.map((w) => {
+        const letras = Array.from(w).map((ch) => {
+          const ausente = setObjetivo ? !setObjetivo.has(ch) : false;
+          const cls = ausente ? 'letra-grave letra-inexistente' : 'letra-grave';
+          return `<i class="${cls}">${Utils.escapeHtml(ch)}</i>`;
+        }).join('');
+        return `<span class="grave-palabra">${letras}</span>`;
+      }).join('');
+
       host.innerHTML = items;
       host.classList.add('is-populated');
     }
 
     _renderContadores() {
-      const { lives, attempts, found } = this.els;
-      if (lives) lives.textContent = String(this.state.vidas);
+      const { attempts, found, wordAttempts } = this.els;
       if (attempts) attempts.textContent = String(this.state.totalIntentos);
       if (found) found.textContent = `${this.state.aciertos}/${this.state.totalPalabras}`;
+      if (wordAttempts) {
+        const slot = this.state.slotActivo;
+        const usados = slot ? slot.intentos : 0;
+        wordAttempts.textContent = `${usados}/${INTENTOS_POR_PALABRA}`;
+      }
     }
 
     _renderAtribucion() {
