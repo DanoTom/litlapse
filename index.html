@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Litlapse — el eclipse de hoy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="css/litlapse.css" />
+</head>
+<body>
+  <main class="stage">
+    <header class="topbar">
+      <span class="meta">Edición №01</span>
+      <span class="logo">L I T L A P S E</span>
+      <span class="meta" id="topbar-date">04 · 06 · 26</span>
+    </header>
+    <hr class="rule" />
+
+    <!-- ───────── pantalla jugando ───────── -->
+    <section data-litlapse="screen-play" class="screen screen-play">
+      <h1 class="display">
+        Tres<br />palabras<br />en elipsis.
+      </h1>
+      <hr class="rule" />
+      <p class="subtitle"><em>El eclipse de hoy — completa la página, restaura el verso.</em></p>
+
+      <article class="fragment-wrap">
+        <p data-litlapse="fragment" class="fragment"></p>
+      </article>
+
+      <form data-litlapse="form" class="input-row" autocomplete="off">
+        <input
+          data-litlapse="input"
+          class="ghost-input"
+          type="text"
+          inputmode="text"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
+          aria-label="Escribe la palabra que falta"
+          maxlength="40"
+        />
+        <span class="input-hint">tu palabra · ↵</span>
+      </form>
+
+      <div class="aux">
+        <button data-litlapse="hint-btn" class="hint-btn" type="button">¿pista?</button>
+        <p data-litlapse="hint-out" class="hint-out" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- ───────── pantalla victoria ───────── -->
+    <section data-litlapse="screen-win" class="screen screen-win" hidden>
+      <h1 class="display">Eclipse resuelto.</h1>
+      <article class="fragment-wrap">
+        <p data-litlapse="fragment-win" class="fragment fragment-win"></p>
+      </article>
+      <div data-litlapse="attribution" class="attribution"></div>
+      <div class="win-actions">
+        <button data-litlapse="share-btn" class="share-btn" type="button">copiar postal</button>
+        <p data-litlapse="share-out" class="share-out" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- ───────── pantalla derrota ───────── -->
+    <section data-litlapse="screen-lose" class="screen screen-lose" hidden>
+      <h1 class="display">El eclipse se cierra.</h1>
+      <p class="subtitle"><em>Vuelve mañana al próximo fragmento.</em></p>
+      <article class="fragment-wrap">
+        <p class="fragment fragment-lose">Las palabras eran:</p>
+      </article>
+      <div data-litlapse="attribution" class="attribution"></div>
+    </section>
+
+    <hr class="rule" />
+    <footer class="bottombar">
+      <ul data-litlapse="graveyard" class="graveyard" aria-label="Cementerio de palabras"></ul>
+      <div class="counters">
+        <span>Intento <strong data-litlapse="attempts">0</strong></span>
+        <span>·</span>
+        <span><strong data-litlapse="found">0/3</strong></span>
+        <span>·</span>
+        <span>Vidas <strong data-litlapse="lives">6</strong></span>
+      </div>
+    </footer>
+  </main>
+
+  <!-- orden estricto de dependencias -->
+  <script src="js/puzzles.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/share.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
