@@ -16,7 +16,14 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+html, body { margin: 0; padding: 0; color: var(--ink); }
+/* Papel envejecido: bg color + noise SVG inline para textura muy sutil. */
+html {
+  background-color: var(--paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.14 0 0 0 0 0.13 0 0 0 0 0.13 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 220px 220px;
+}
 body { font-family: var(--sans); }
 
 .stage {
@@ -71,6 +78,29 @@ body { font-family: var(--sans); }
   line-height: 1.7;
   max-width: 620px;
   margin: 0;
+}
+/* Drop-cap editorial en versos revelados (victoria, derrota, postal):
+   la primera letra del fragmento crece y vuelve italic. Clásico de
+   libros de arte; sin tocar la alineación del párrafo. */
+.fragment-win::first-letter,
+.fragment-lose::first-letter,
+.postal-frag::first-letter {
+  font-size: 1.45em;
+  line-height: 1;
+  font-style: italic;
+  font-weight: 500;
+  padding-right: 0.04em;
+  vertical-align: -0.03em;
+}
+/* Respiración: cuando el verso aparece resuelto, una sola exhalación
+   (1 → 1.018 → 1) en 1.5s. Subliminal, pero da cierre al momento. */
+.fragment-win {
+  animation: versoRespira 1.5s ease 0.5s 1 both;
+  transform-origin: center;
+}
+@keyframes versoRespira {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.018); }
 }
 
 .elipsis {
@@ -170,6 +200,41 @@ body { font-family: var(--sans); }
   letter-spacing: 2px;
   margin-left: 4px;
 }
+/* Cada letra de "Contiene: A, E" aparece escalonada en 80ms. El delay
+   lo controla `--i` inline en cada <span>. La coma queda como texto
+   plano entre spans y no anima. */
+.susurro strong span {
+  display: inline-block;
+  animation: susurroLetra 0.5s ease both;
+  animation-delay: calc(var(--i, 0) * 80ms);
+}
+@keyframes susurroLetra {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ────────────────────── TIP DE ONBOARDING ────────────────────── */
+
+/* Una sola frase tipográfica sobre el input la primera vez. Se cierra
+   sola al primer intento del usuario. Reemplaza el manual auto-open
+   que era demasiado pesado. */
+.tip {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-soft);
+  text-align: center;
+  margin: 4px auto 0;
+  max-width: 380px;
+  padding: 0 22px;
+  animation: tipAparece 0.6s ease 0.4s both;
+}
+.tip em { font-style: italic; color: var(--ink); }
+.tip[hidden] { display: none; }
+@keyframes tipAparece {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 .aux { text-align: center; margin: 4px 0; }
 .hint-btn {
@@ -256,8 +321,7 @@ body { font-family: var(--sans); }
   margin-left: 22px;
 }
 /* Botón con ícono inline: el SVG va a la izquierda del texto y hereda
-   el color del botón con currentColor. El span retoma la itálica del
-   share-btn (que estaba en el botón) para no perder el carácter. */
+   el color del botón con currentColor. */
 .share-btn--with-icon {
   display: inline-flex;
   align-items: center;
@@ -359,6 +423,16 @@ body { font-family: var(--sans); }
   border-bottom: 1px solid var(--ink);
   padding: 4px 2px;
 }
+/* Pequeña marca de eclipses resueltos, debajo del link "cómo se juega".
+   Sólo visible cuando el jugador ya completó al menos uno. */
+.streak {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-soft);
+  letter-spacing: 0.3px;
+  margin-top: 2px;
+}
 body.in-howto .bottombar { display: none; }
 
 .postal {
@@ -446,12 +520,6 @@ body.in-howto .bottombar { display: none; }
   text-transform: none;
   color: var(--ink);
 }
-.postal-capture {
-  position: fixed;
-  top: 0;
-  left: -10000px;
-  pointer-events: none;
-}
 
 .postal-modal {
   position: fixed;
@@ -462,6 +530,7 @@ body.in-howto .bottombar { display: none; }
   justify-content: center;
   padding: 24px;
   z-index: 1000;
+  animation: modalFondoAparece 280ms ease both;
 }
 .postal-modal[hidden] { display: none; }
 .postal-modal-inner {
@@ -470,6 +539,15 @@ body.in-howto .bottombar { display: none; }
   align-items: center;
   gap: 18px;
   max-width: 100%;
+  animation: modalInnerAparece 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes modalFondoAparece {
+  from { background-color: rgba(36, 34, 32, 0); }
+  to   { background-color: rgba(36, 34, 32, 0.78); }
+}
+@keyframes modalInnerAparece {
+  from { transform: scale(0.96); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
 }
 /* El stage ocupa el tamaño efectivo (escalado por JS).
    El wrap mantiene el tamaño nativo 540×960 pero se posiciona en
@@ -506,7 +584,6 @@ body.in-howto .bottombar { display: none; }
   cursor: pointer;
   padding: 4px 2px;
 }
-/* Botón principal del modal: ícono de descarga + texto */
 .postal-action-btn--primary {
   display: inline-flex;
   align-items: center;
@@ -576,6 +653,7 @@ body.in-howto .bottombar { display: none; }
     letter-spacing: 0.5px;
   }
   .susurro strong { letter-spacing: 1.6px; }
+  .tip { font-size: 12.5px; }
   .hint-btn { font-size: 14px; }
   .hint-out { font-size: 13px; }
   .bottombar {
@@ -622,13 +700,19 @@ body.in-howto .bottombar { display: none; }
   .howto-back-link { font-size: 15px; }
   .counters-block { align-items: center; gap: 10px; }
   .howto-link { font-size: 14px; padding: 5px 2px; }
+  .streak { font-size: 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .letra-slot.fijada.nueva,
   .elipsis.active .letra-slot.vacia,
   .attribution,
-  .susurro {
+  .susurro,
+  .susurro strong span,
+  .tip,
+  .fragment-win,
+  .postal-modal,
+  .postal-modal-inner {
     animation: none !important;
     transition: none !important;
   }

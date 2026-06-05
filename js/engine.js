@@ -2,8 +2,8 @@
  * litlapse · engine.js
  * --------------------------------------------------------------
  * Motor de presentación. Render del fragmento como casilleros de
- * letras (slots), conexión con el estado deductivo, modal de postal
- * y pantalla "cómo se juega".
+ * letras (slots), conexión con el estado deductivo, modal de postal,
+ * pantalla "cómo se juega" y onboarding inline.
  * --------------------------------------------------------------
  */
 (function (global) {
@@ -11,6 +11,29 @@
 
   const { Utils, Share } = global.Litlapse;
   const { STATUS, INTENTOS_POR_PALABRA } = global.Litlapse.State;
+
+  /** Romanos de 1 a 39. Fuera de rango devuelve el arábigo crudo. */
+  function _aRomano(n) {
+    if (typeof n !== 'number' || n < 1 || n > 39) return String(n);
+    const tabla = [['XXX', 30], ['XX', 20], ['X', 10], ['IX', 9],
+                   ['V', 5], ['IV', 4], ['I', 1]];
+    let r = '';
+    for (const [s, v] of tabla) { while (n >= v) { r += s; n -= v; } }
+    return r;
+  }
+
+  /** Lee/escribe el listado de puzzles resueltos en este navegador. */
+  function _leerEclipses() {
+    try {
+      const raw = global.localStorage.getItem('litlapse:eclipses');
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (_e) { return []; }
+  }
+  function _guardarEclipses(arr) {
+    try { global.localStorage.setItem('litlapse:eclipses', JSON.stringify(arr)); }
+    catch (_e) { /* silent */ }
+  }
 
   class GameEngine {
     constructor(puzzle, state, opts = {}) {
@@ -28,6 +51,7 @@
       this._enlazarEventos();
       this._ajustarInputAlSlot();
       this.render();
+      this._mostrarTipInicial();
       this._enfocarInput();
     }
 
@@ -60,10 +84,11 @@
         postalStage: $('[data-litlapse="postal-stage"]'),
         postalWrap: $('[data-litlapse="postal-wrap"]'),
         postalPreview: $('[data-litlapse="postal-preview"]'),
-        postalCapture: $('[data-litlapse="postal-capture"]'),
         postalShareBtn: $('[data-litlapse="postal-share-btn"]'),
         postalCloseBtn: $('[data-litlapse="postal-close-btn"]'),
-        postalOut: $('[data-litlapse="postal-out"]')
+        postalOut: $('[data-litlapse="postal-out"]'),
+        tipInput: $('[data-litlapse="tip-input"]'),
+        streak: $('[data-litlapse="streak"]')
       };
     }
 
@@ -176,6 +201,9 @@
       const valor = input.value;
       const resultado = this.state.intentar(valor);
 
+      // El primer intento (sea válido o no) cierra el tip de onboarding.
+      if (resultado.tipo !== 'IGNORADO') this._ocultarTipInicial();
+
       if (resultado.tipo === 'LARGO_INVALIDO') {
         this._vibrar(input);
         this._mensajeBreve(resultado.motivo);
@@ -274,11 +302,12 @@
       }
     }
 
+    // ──────────────────────────── postal visual ──
+
     _abrirPostal() {
       if (this.state.status !== STATUS.VICTORIA) return;
       const html = this._postalHtml();
       if (this.els.postalPreview) this.els.postalPreview.innerHTML = html;
-      if (this.els.postalCapture) this.els.postalCapture.innerHTML = html;
       const modal = this.els.postalModal;
       if (!modal) return;
       modal.hidden = false;
@@ -300,7 +329,6 @@
       const wrap = this.els.postalWrap;
       const stage = this.els.postalStage;
       if (!wrap || !stage) return;
-      // Reservamos espacio para los botones + status + padding del modal.
       const margenVertical = 220;
       const margenLateral = 48;
       const vh = Math.max(380, global.innerHeight - margenVertical);
@@ -314,14 +342,40 @@
     async _compartirImagen() {
       const out = this.els.postalOut;
       const setOut = (txt) => { if (out) out.textContent = txt; };
-      if (!this.els.postalCapture) { setOut('Sin postal disponible.'); return; }
-      setOut('Generando imagen…');
-      const r = await Share.compartirImagen(this.els.postalCapture, this.puzzle);
-      if (!r.ok) {
-        setOut('No se pudo generar la imagen.');
+      if (!global.htmlToImage) {
+        setOut('No se pudo cargar el motor de imagen.');
         return;
       }
-      setOut(r.modo === 'share' ? '' : 'Imagen descargada.');
+      setOut('Generando imagen…');
+
+      // Renderizamos la postal en un container temporal a tamaño nativo.
+      // El wrapper tiene tamaño 0 con overflow:hidden — no se ve y no
+      // afecta el layout, pero html-to-image captura el nodo `postal`
+      // con sus 540×960 nativos completamente renderizados.
+      //
+      // Este patrón es más robusto que mantener un elemento offscreen
+      // con position:fixed left:-10000px, que algunas versiones de
+      // html-to-image clonan con esa posición y rendean fuera del SVG.
+      const wrapper = global.document.createElement('div');
+      wrapper.setAttribute('aria-hidden', 'true');
+      wrapper.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;left:0;top:0;';
+      const postal = global.document.createElement('div');
+      postal.className = 'postal';
+      postal.innerHTML = this._postalHtml();
+      wrapper.appendChild(postal);
+      global.document.body.appendChild(wrapper);
+
+      try {
+        await new Promise((r) => global.requestAnimationFrame(r));
+        const result = await Share.compartirImagen(postal, this.puzzle);
+        if (!result.ok) {
+          setOut('No se pudo generar la imagen.');
+          return;
+        }
+        setOut(result.modo === 'share' ? '' : 'Imagen descargada.');
+      } finally {
+        wrapper.remove();
+      }
     }
 
     _postalHtml() {
@@ -356,6 +410,8 @@
       ].join('');
     }
 
+    // ──────────────────────────── render ──
+
     render() {
       this._renderPantalla();
       this._renderFragmento();
@@ -364,6 +420,7 @@
       this._renderContadores();
       this._renderAtribucion();
       this._renderBotonesEstado();
+      this._actualizarStreak();
       this._ajustarInputAlSlot();
       this._fijadasFrescas = new Map();
     }
@@ -452,10 +509,12 @@
         host.classList.remove('is-visible');
         return;
       }
+      // Cada letra va en su propio <span> con `--i` para el stagger CSS.
+      // El ", " queda como texto plano entre los spans — no anima.
       const letras = vigentes
         .slice()
         .sort()
-        .map((c) => Utils.escapeHtml(c.toUpperCase()))
+        .map((c, i) => `<span style="--i:${i}">${Utils.escapeHtml(c.toUpperCase())}</span>`)
         .join(', ');
       host.innerHTML = `Contiene: <strong>${letras}</strong>`;
       host.classList.add('is-visible');
@@ -518,6 +577,63 @@
       const enVictoria = this.state.status === STATUS.VICTORIA;
       if (shareBtn) shareBtn.hidden = !enVictoria;
       if (imageBtn) imageBtn.hidden = !enVictoria;
+      // Si la partida ya terminó, escondemos el tip (sin marcarlo seen).
+      if (this.state.terminada) this._ocultarTipInicial({ silencioso: true });
+    }
+
+    // ──────────────────────────── onboarding inline ──
+
+    /**
+     * Muestra el tip sobre el input la primera vez que el jugador entra
+     * (en este navegador). Si ya jugó o la partida ya está terminada al
+     * cargar, no tiene sentido — no aparece.
+     */
+    _mostrarTipInicial() {
+      const tip = this.els.tipInput;
+      if (!tip) return;
+      if (this.state.terminada) return;
+      try {
+        if (global.localStorage.getItem('litlapse:tip-input')) return;
+      } catch (_e) { return; }
+      tip.hidden = false;
+    }
+
+    _ocultarTipInicial(opts) {
+      const tip = this.els.tipInput;
+      if (!tip || tip.hidden) return;
+      tip.hidden = true;
+      if (!opts || !opts.silencioso) {
+        try { global.localStorage.setItem('litlapse:tip-input', '1'); }
+        catch (_e) { /* silent */ }
+      }
+    }
+
+    // ──────────────────────────── eclipses resueltos ──
+
+    /**
+     * Si el puzzle de hoy está en VICTORIA, lo registramos en el listado
+     * persistente; después actualizamos el texto "N eclipses resueltos"
+     * de la barra inferior. Idempotente: registrar dos veces el mismo
+     * puzzle no cuenta doble.
+     */
+    _actualizarStreak() {
+      const el = this.els.streak;
+      if (!el) return;
+      let lista = _leerEclipses();
+      if (this.state.status === STATUS.VICTORIA && !lista.includes(this.puzzle.id)) {
+        lista.push(this.puzzle.id);
+        _guardarEclipses(lista);
+      }
+      if (lista.length === 0) {
+        el.hidden = true;
+        el.textContent = '';
+        return;
+      }
+      const n = lista.length;
+      el.hidden = false;
+      el.textContent = n === 1
+        ? '1 eclipse resuelto'
+        : `${_aRomano(n)} eclipses resueltos`;
     }
   }
 
