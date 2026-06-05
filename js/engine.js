@@ -31,8 +31,6 @@
       this._enfocarInput();
     }
 
-    // ──────────────────────────── DOM lookup ──
-
     _querySelectores() {
       const $ = (sel) => this.root.querySelector(sel);
       const $$ = (sel) => Array.from(this.root.querySelectorAll(sel));
@@ -152,8 +150,6 @@
       });
     }
 
-    // ──────────────────────────── cómo se juega ──
-
     _abrirHowto() {
       const { screenHowto, screenPlay, screenWin, screenLose } = this.els;
       if (!screenHowto) return;
@@ -172,8 +168,6 @@
       global.document.body.classList.remove('in-howto');
       this.render();
     }
-
-    // ──────────────────────────── entrada del usuario ──
 
     _procesarEntrada() {
       const input = this.els.input;
@@ -280,8 +274,6 @@
       }
     }
 
-    // ──────────────────────────── postal visual ──
-
     _abrirPostal() {
       if (this.state.status !== STATUS.VICTORIA) return;
       const html = this._postalHtml();
@@ -308,9 +300,10 @@
       const wrap = this.els.postalWrap;
       const stage = this.els.postalStage;
       if (!wrap || !stage) return;
-      const margenVertical = 200;
+      // Reservamos espacio para los botones + status + padding del modal.
+      const margenVertical = 220;
       const margenLateral = 48;
-      const vh = Math.max(400, global.innerHeight - margenVertical);
+      const vh = Math.max(380, global.innerHeight - margenVertical);
       const vw = Math.max(280, global.innerWidth - margenLateral);
       const escala = Math.min(1, vh / 960, vw / 540);
       wrap.style.transform = `scale(${escala})`;
@@ -363,8 +356,6 @@
       ].join('');
     }
 
-    // ──────────────────────────── render ──
-
     render() {
       this._renderPantalla();
       this._renderFragmento();
@@ -379,7 +370,6 @@
 
     _renderPantalla() {
       const { screenHowto, screenPlay, screenWin, screenLose } = this.els;
-      // Si el usuario está leyendo "cómo se juega", no tocamos las pantallas.
       if (screenHowto && !screenHowto.hidden) return;
       const s = this.state.status;
       const toggle = (el, on) => {

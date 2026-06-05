@@ -255,6 +255,26 @@ body { font-family: var(--sans); }
   border-bottom-color: var(--ink-faint);
   margin-left: 22px;
 }
+/* Botón con ícono inline: el SVG va a la izquierda del texto y hereda
+   el color del botón con currentColor. El span retoma la itálica del
+   share-btn (que estaba en el botón) para no perder el carácter. */
+.share-btn--with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-style: normal;
+}
+.share-btn--with-icon span {
+  font-style: italic;
+}
+.btn-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+  transform: translateY(-1px);
+}
 .share-out {
   font-family: var(--sans); font-size: 11px;
   letter-spacing: 1.5px; text-transform: uppercase;
@@ -451,12 +471,19 @@ body.in-howto .bottombar { display: none; }
   gap: 18px;
   max-width: 100%;
 }
+/* El stage ocupa el tamaño efectivo (escalado por JS).
+   El wrap mantiene el tamaño nativo 540×960 pero se posiciona en
+   absoluto sobre el stage con transform-origin: top-left, así la
+   imagen escalada llena el stage de borde a borde sin off-center. */
 .postal-stage {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 .postal-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 540px;
   height: 960px;
   transform-origin: top left;
@@ -464,20 +491,30 @@ body.in-howto .bottombar { display: none; }
 .postal-actions {
   display: flex;
   gap: 22px;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
   justify-content: center;
 }
 .postal-action-btn {
   font-family: var(--serif);
   font-style: italic;
-  font-size: 17px;
+  font-size: 18px;
   color: var(--paper);
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--paper);
   cursor: pointer;
-  padding: 0 0 2px;
+  padding: 4px 2px;
+}
+/* Botón principal del modal: ícono de descarga + texto */
+.postal-action-btn--primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-style: normal;
+}
+.postal-action-btn--primary span {
+  font-style: italic;
 }
 .postal-close {
   font-size: 14px;
@@ -567,7 +604,7 @@ body.in-howto .bottombar { display: none; }
   .share-out { font-size: 10px; letter-spacing: 1.2px; }
   .postal-modal { padding: 16px; }
   .postal-modal-inner { gap: 14px; }
-  .postal-action-btn { font-size: 15px; }
+  .postal-action-btn { font-size: 16px; }
   .postal-close { font-size: 13px; }
   .screen-howto .display { font-size: clamp(36px, 11vw, 56px); }
   .howto-steps {
