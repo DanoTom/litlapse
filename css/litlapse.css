@@ -124,8 +124,14 @@ body { font-family: var(--sans); }
   50%      { opacity: 0.55; }
 }
 
-/* Elipsis ya resuelta dentro de la pantalla "jugando": deja una huella
-   suave (border-bottom punteado) para que se distinga de las pendientes. */
+/* Elipsis ya resuelta: colapsa el espaciado entre casillas para que la
+   palabra fluya como texto normal (sin "b e l l e z a" suelto) y deja
+   un border-bottom dotted continuo como huella editorial. */
+.elipsis.completada .letra-slot,
+.elipsis.en-victoria .letra-slot {
+  margin: 0;
+  min-width: 0;
+}
 .elipsis.completada .letra-slot.fijada {
   border-bottom: 1px dotted var(--ink-faint);
 }
@@ -287,6 +293,96 @@ body { font-family: var(--sans); }
   white-space: pre-wrap;
 }
 .share-out.is-visible { opacity: 1; }
+
+/* ────────────────────── MÓVIL (≤ 720px) ────────────────────── */
+
+@media (max-width: 720px) {
+  .stage {
+    padding: 32px 24px 24px;
+    gap: 16px;
+  }
+
+  /* Topbar pasa a una sola columna centrada: edición, logo, fecha.
+     Estack vertical para no romper en dos líneas cada meta. */
+  .topbar {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    justify-items: center;
+    text-align: center;
+  }
+  .topbar .meta,
+  .topbar .meta:last-child {
+    text-align: center;
+    font-size: 9px;
+    letter-spacing: 1.2px;
+  }
+  .logo {
+    font-size: 10px;
+    letter-spacing: 3px;
+  }
+
+  .display {
+    font-size: clamp(36px, 11vw, 72px);
+    line-height: 0.92;
+    letter-spacing: -0.03em;
+    margin: 4px 0 14px;
+  }
+  .subtitle { font-size: 14px; }
+
+  .fragment-wrap { padding: 20px 0; }
+  .fragment {
+    font-size: 17px;
+    line-height: 1.65;
+    max-width: 100%;
+  }
+
+  /* En móvil reducimos el aire entre casilleros vacíos para que la
+     palabra entre completa en una línea aunque sea larga (cristales). */
+  .letra-slot { margin: 0 0.03em; min-width: 0.55em; }
+
+  .ghost-input { font-size: 18px; }
+  .input-hint {
+    font-size: 9px;
+    letter-spacing: 2px;
+  }
+
+  .susurro {
+    font-size: 8.5pt;
+    letter-spacing: 0.5px;
+  }
+  .susurro strong { letter-spacing: 1.6px; }
+
+  .hint-btn { font-size: 13px; }
+  .hint-out { font-size: 13px; }
+
+  /* La barra inferior pasa a stack vertical: contadores arriba (más
+     útil al jugar) y cementerio debajo. */
+  .bottombar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    text-align: center;
+  }
+  .graveyard {
+    text-align: center;
+    font-size: 10.5px;
+    order: 2;
+  }
+  .counters {
+    justify-content: center;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    font-size: 9px;
+    letter-spacing: 1.4px;
+    order: 1;
+  }
+
+  /* Atribución de la pantalla "Eclipse resuelto" */
+  .litlapse-author { font-size: 9px; letter-spacing: 2.2px; }
+  .litlapse-work { font-size: 14px; }
+
+  .share-btn { font-size: 16px; }
+  .share-out { font-size: 10px; letter-spacing: 1.2px; }
+}
 
 /* ────────────────────── REDUCED MOTION ────────────────────── */
 
