@@ -1,89 +1,67 @@
 /**
  * litlapse · share.js
  * --------------------------------------------------------------
- * Generador de string compartible (mística "Wordle" con carácter
- * editorial) y copia al portapapeles. No emite emojis ruidosos:
- * sólo tipografía, puntos suspensivos y un guion em.
+ * Compartido del resultado. Dos pistas:
  *
- * Formato canónico:
+ *  - `build(puzzle, snapshot)` arma el texto plano (estilo Wordle):
  *
- *     Litlapse — Día #1
- *     "La [......] del mundo tenía dos caras..."
- *     Resuelto en 4 intentos · Sin pistas
- *     Juega el fragmento de mañana en: litlapse.com
+ *        Litlapse — Día #1
+ *        04·06·26 · resuelto en 4 intentos · sin pistas
+ *        litlapse.com
+ *
+ *    Sin teaser del fragmento — no spoilea a quien no jugó hoy.
+ *
+ *  - `copiar(texto)` copia al portapapeles (Clipboard API + fallback).
+ *
+ *  - `compartirImagen(nodo, puzzle)` toma un nodo DOM (la postal),
+ *    lo convierte a PNG con html-to-image, e intenta compartirlo
+ *    nativamente. Si el navegador no soporta Web Share con archivos,
+ *    cae a descarga directa.
  * --------------------------------------------------------------
  */
 (function (global) {
   'use strict';
 
-  const { Utils } = global.Litlapse;
   const DOMINIO = 'litlapse.com';
 
-  /**
-   * Construye el extracto teaser. Toma el inicio del textoOriginal,
-   * sustituye la primera palabra oculta por una elipsis textual del
-   * mismo largo y conserva unas pocas palabras de cola antes del
-   * truncado con "..." para que el fragmento sugiera, no spoilee.
-   *
-   * Resultado tipo: `"La [.......] del mundo tenía dos caras..."`.
-   */
-  const COLA_PALABRAS = 4;
-  function _teaser(puzzle) {
-    const tokens = Utils.tokenize(puzzle.textoOriginal);
-    const primera = puzzle.palabrasOcultas
-      .slice()
-      .sort((a, b) => a.indicePalabra - b.indicePalabra)[0];
-    if (!primera) return `"${puzzle.textoOriginal}"`;
-
-    const idx = primera.indicePalabra;
-    const largo = (primera.palabraCorrecta || '').length;
-    const placeholder = `[${'.'.repeat(Math.max(3, largo))}]`;
-
-    const fin = Math.min(tokens.length, idx + 1 + COLA_PALABRAS);
-    const recorte = tokens.slice(0, fin).map((t, i) => {
-      if (i !== idx) return t;
-      const { prefijo, sufijo } = Utils.splitPunctuation(t);
-      return `${prefijo}${placeholder}${sufijo}`;
-    });
-    // Si truncamos antes del final, removemos puntuación adherida
-    // al último token para que la cola "..." se vea limpia.
-    if (fin < tokens.length) {
-      const ultimo = recorte[recorte.length - 1];
-      recorte[recorte.length - 1] = ultimo.replace(/[.,;:!?…]+$/u, '');
-    }
-    const sufijoFinal = fin < tokens.length ? '...' : '';
-    return `"${recorte.join(' ')}${sufijoFinal}"`;
+  /** Convierte "2026-06-04" en "04·06·26". */
+  function _formatearFecha(iso) {
+    if (typeof iso !== 'string') return '';
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return iso;
+    return `${m[3]}·${m[2]}·${m[1].slice(2)}`;
   }
 
-  /** Resumen de pistas para la línea final. */
+  /** Resumen de pistas para la línea de cierre. */
   function _linePistas(pistasUsadas) {
-    if (!pistasUsadas) return 'Sin pistas';
-    if (pistasUsadas === 1) return 'Con 1 pista';
-    return `Con ${pistasUsadas} pistas`;
+    if (!pistasUsadas) return 'sin pistas';
+    if (pistasUsadas === 1) return 'con 1 pista';
+    return `con ${pistasUsadas} pistas`;
   }
 
   /**
-   * Genera el string completo a partir de un puzzle y un snapshot
+   * Genera el texto compartible a partir de un puzzle y un snapshot
    * de estado (ver GameState#snapshot).
    */
   function build(puzzle, snapshot) {
     const slots = Array.isArray(snapshot.slots) ? snapshot.slots : [];
-    const intentos = slots.reduce((acc, s) => acc + (s && typeof s.intentos === 'number' ? s.intentos : 0), 0);
-    const teaser = _teaser(puzzle);
+    const intentos = slots.reduce(
+      (acc, s) => acc + (s && typeof s.intentos === 'number' ? s.intentos : 0),
+      0
+    );
+    const fecha = _formatearFecha(puzzle.fecha);
     const pistas = _linePistas(snapshot.pistasUsadas || 0);
+    const intentoStr = `${intentos} intento${intentos === 1 ? '' : 's'}`;
 
     return [
       `Litlapse — Día #${puzzle.id}`,
-      teaser,
-      `Resuelto en ${intentos} intento${intentos === 1 ? '' : 's'} · ${pistas}`,
-      `Juega el fragmento de mañana en: ${DOMINIO}`
+      `${fecha} · resuelto en ${intentoStr} · ${pistas}`,
+      DOMINIO
     ].join('\n');
   }
 
   /**
-   * Copia un texto al portapapeles. Usa Clipboard API cuando está
-   * disponible y cae a un textarea fuera de pantalla como fallback.
-   * Devuelve una promesa con `true`/`false`.
+   * Copia un texto al portapapeles. Clipboard API + fallback de textarea.
    */
   async function copiar(texto) {
     if (typeof texto !== 'string' || !texto) return false;
@@ -111,6 +89,62 @@
     }
   }
 
+  /**
+   * Renderiza un nodo DOM como PNG y lo entrega vía Web Share API
+   * (si el navegador lo soporta con archivos) o cae a descarga directa.
+   *
+   * Devuelve `{ ok: true, modo: 'share' | 'download' }` o
+   * `{ ok: false, motivo }`.
+   */
+  async function compartirImagen(nodo, puzzle) {
+    if (!nodo) return { ok: false, motivo: 'sin nodo' };
+    if (!global.htmlToImage) return { ok: false, motivo: 'librería no disponible' };
+
+    let dataUrl;
+    try {
+      dataUrl = await global.htmlToImage.toPng(nodo, {
+        pixelRatio: 2,
+        cacheBust: true,
+        backgroundColor: '#f6f3eb'
+      });
+    } catch (e) {
+      return { ok: false, motivo: 'no se pudo generar la imagen' };
+    }
+
+    const nombre = `litlapse-${puzzle && puzzle.id ? puzzle.id : 'eclipse'}.png`;
+
+    // Intentar share nativo con archivo (mobile principalmente).
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], nombre, { type: 'image/png' });
+      const nav = global.navigator;
+      if (nav && typeof nav.canShare === 'function' && nav.canShare({ files: [file] })) {
+        try {
+          await nav.share({
+            files: [file],
+            title: `Litlapse — Día #${puzzle && puzzle.id}`
+          });
+          return { ok: true, modo: 'share' };
+        } catch (_e) {
+          // Usuario canceló o falló: caemos a descarga.
+        }
+      }
+    } catch (_e) { /* fallback abajo */ }
+
+    // Fallback: descarga directa.
+    try {
+      const a = global.document.createElement('a');
+      a.href = dataUrl;
+      a.download = nombre;
+      global.document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return { ok: true, modo: 'download' };
+    } catch (_e) {
+      return { ok: false, motivo: 'no se pudo descargar' };
+    }
+  }
+
   global.Litlapse = global.Litlapse || {};
-  global.Litlapse.Share = { build, copiar };
+  global.Litlapse.Share = { build, copiar, compartirImagen };
 })(typeof window !== 'undefined' ? window : globalThis);

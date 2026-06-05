@@ -74,17 +74,12 @@ body { font-family: var(--sans); }
 
 /* ────────────────────── ELIPSIS (casilleros letra a letra) ────────────────────── */
 
-/* Contenedor de slots de una palabra oculta. Inline-block para que el
-   texto del fragmento siga fluyendo con saltos de línea naturales. */
 .elipsis {
   display: inline-block;
   vertical-align: baseline;
   font-family: var(--serif);
   white-space: nowrap;
 }
-
-/* Cada casilla: una letra o un guion bajo a la espera. Anchura mínima
-   uniforme para que la palabra no salte al fijar letras nuevas. */
 .letra-slot {
   display: inline-block;
   min-width: 0.62em;
@@ -92,15 +87,11 @@ body { font-family: var(--sans); }
   font-weight: 400;
   margin: 0 0.06em;
 }
-
-/* Casillero vacío: guion bajo grueso. */
 .letra-slot.vacia {
   font-weight: 700;
   color: var(--ink);
 }
 .letra-slot.vacia::before { content: "_"; }
-
-/* Casillero con letra fijada. */
 .letra-slot.fijada {
   font-weight: 400;
   color: var(--ink);
@@ -112,10 +103,6 @@ body { font-family: var(--sans); }
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-
-/* Pulso suave de la elipsis activa, sólo en los slots vacíos.
-   55%↔100% para que respire sin distraer la lectura. Las letras
-   ya fijadas quedan firmes. */
 .elipsis.active .letra-slot.vacia {
   animation: pulseElipsis 2s ease-in-out infinite;
 }
@@ -123,22 +110,18 @@ body { font-family: var(--sans); }
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.55; }
 }
-
-/* Elipsis ya resuelta dentro de la pantalla "jugando": deja una huella
-   suave (border-bottom punteado) para que se distinga de las pendientes. */
+.elipsis.completada .letra-slot,
+.elipsis.en-victoria .letra-slot {
+  margin: 0;
+  min-width: 0;
+}
 .elipsis.completada .letra-slot.fijada {
   border-bottom: 1px dotted var(--ink-faint);
 }
-
-/* En la pantalla "victoria" el border-bottom punteado refuerza la
-   reseña tipográfica del handoff. */
 .elipsis.en-victoria .letra-slot.fijada {
   border-bottom: 1px dotted var(--ink-faint);
   padding-bottom: 1px;
 }
-
-/* En derrota, las palabras NO resueltas se muestran en italic tachadas
-   en su lugar. No usan casilleros: es una revelación final. */
 .elipsis.revelada-fallida {
   font-style: italic;
   text-decoration: line-through;
@@ -173,7 +156,7 @@ body { font-family: var(--sans); }
   color: var(--ink-soft);
 }
 
-/* ────────────────────── SUSURRO (letras descolocadas) ────────────────────── */
+/* ────────────────────── SUSURRO ────────────────────── */
 
 .susurro {
   font-family: var(--sans);
@@ -193,7 +176,7 @@ body { font-family: var(--sans); }
   margin-left: 4px;
 }
 
-/* ────────────────────── AUXILIO (pista de diccionario) ────────────────────── */
+/* ────────────────────── AUXILIO (pista) ────────────────────── */
 
 .aux { text-align: center; margin: 4px 0; }
 .hint-btn {
@@ -239,8 +222,6 @@ body { font-family: var(--sans); }
   font-style: inherit;
   display: inline;
 }
-/* Letra que no existe en la palabra activa: opacidad muy baja para que
-   el jugador la descarte de un vistazo. */
 .grave-palabra .letra-inexistente {
   opacity: 0.15;
 }
@@ -279,6 +260,12 @@ body { font-family: var(--sans); }
   border-bottom: 1px solid var(--ink);
   cursor: pointer; padding: 0 0 2px;
 }
+.share-btn--secondary {
+  font-size: 14px;
+  color: var(--ink-soft);
+  border-bottom-color: var(--ink-faint);
+  margin-left: 22px;
+}
 .share-out {
   font-family: var(--sans); font-size: 11px;
   letter-spacing: 1.5px; text-transform: uppercase;
@@ -287,6 +274,338 @@ body { font-family: var(--sans); }
   white-space: pre-wrap;
 }
 .share-out.is-visible { opacity: 1; }
+
+/* ────────────────────── CÓMO SE JUEGA ────────────────────── */
+
+.screen-howto .display {
+  font-size: clamp(40px, 7vw, 96px);
+  line-height: 0.92;
+}
+
+.howto-steps {
+  list-style: none;
+  margin: 28px 0 32px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 36px 56px;
+}
+.howto-step {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+.howto-num {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 28px;
+  color: var(--ink);
+  line-height: 1;
+}
+.howto-body h4 {
+  font-family: var(--sans);
+  font-size: 10px;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+.howto-body p {
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.55;
+  margin: 0;
+  color: var(--ink);
+}
+.howto-body em {
+  font-style: italic;
+  color: var(--ink-soft);
+}
+.howto-back {
+  text-align: center;
+  margin: 8px 0 0;
+}
+.howto-back-link {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 1px;
+}
+
+.counters-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.howto-link {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-bottom: 1px solid var(--ink-faint);
+  padding-bottom: 1px;
+}
+body.in-howto .bottombar { display: none; }
+
+/* ────────────────────── POSTAL (540×960) ────────────────────── */
+
+.postal {
+  width: 540px;
+  height: 960px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--serif);
+  padding: 70px 56px 44px;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 28px;
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.postal-mark {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--sans);
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.postal-logo { font-weight: 500; }
+.postal-num  { letter-spacing: 1.5px; color: var(--ink-soft); }
+.postal-frag {
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.7;
+  margin: 0;
+  text-align: center;
+  align-self: center;
+  color: var(--ink);
+}
+.postal-revealed {
+  border-bottom: 1px dotted var(--ink-faint);
+  font-weight: 500;
+}
+.postal-attrib {
+  text-align: center;
+  font-family: var(--sans);
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--ink);
+  line-height: 1.6;
+}
+.postal-attrib em {
+  display: block;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-soft);
+  margin-top: 4px;
+}
+.postal-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans);
+  font-size: 9px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.postal-seal {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+}
+.postal-capture {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  pointer-events: none;
+}
+
+/* ────────────────────── MODAL DE POSTAL ────────────────────── */
+
+.postal-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(36, 34, 32, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+.postal-modal[hidden] { display: none; }
+.postal-modal-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  max-width: 100%;
+}
+.postal-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.postal-wrap {
+  width: 540px;
+  height: 960px;
+  transform-origin: top left;
+}
+.postal-actions {
+  display: flex;
+  gap: 22px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.postal-action-btn {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--paper);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--paper);
+  cursor: pointer;
+  padding: 0 0 2px;
+}
+.postal-close {
+  font-size: 14px;
+  color: rgba(251, 249, 245, 0.55);
+  border-bottom-color: rgba(251, 249, 245, 0.3);
+}
+.postal-out {
+  font-family: var(--sans);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(251, 249, 245, 0.7);
+  margin: 0;
+  min-height: 1em;
+}
+
+/* ────────────────────── MÓVIL (≤ 720px) ────────────────────── */
+
+@media (max-width: 720px) {
+  .stage {
+    padding: 32px 24px 24px;
+    gap: 16px;
+  }
+  .topbar {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    justify-items: center;
+    text-align: center;
+  }
+  .topbar .meta,
+  .topbar .meta:last-child {
+    text-align: center;
+    font-size: 9px;
+    letter-spacing: 1.2px;
+  }
+  .logo {
+    font-size: 10px;
+    letter-spacing: 3px;
+  }
+  .display {
+    font-size: clamp(36px, 11vw, 72px);
+    line-height: 0.92;
+    letter-spacing: -0.03em;
+    margin: 4px 0 14px;
+  }
+  .subtitle { font-size: 14px; }
+  .fragment-wrap { padding: 20px 0; }
+  .fragment {
+    font-size: 17px;
+    line-height: 1.65;
+    max-width: 100%;
+  }
+  .letra-slot { margin: 0 0.03em; min-width: 0.55em; }
+  .ghost-input { font-size: 18px; }
+  .input-hint {
+    font-size: 9px;
+    letter-spacing: 2px;
+  }
+  .susurro {
+    font-size: 8.5pt;
+    letter-spacing: 0.5px;
+  }
+  .susurro strong { letter-spacing: 1.6px; }
+  .hint-btn { font-size: 13px; }
+  .hint-out { font-size: 13px; }
+  .bottombar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    text-align: center;
+  }
+  .graveyard {
+    text-align: center;
+    font-size: 10.5px;
+    order: 2;
+  }
+  .counters {
+    justify-content: center;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    font-size: 9px;
+    letter-spacing: 1.4px;
+    order: 1;
+  }
+  .litlapse-author { font-size: 9px; letter-spacing: 2.2px; }
+  .litlapse-work { font-size: 14px; }
+  .share-btn { font-size: 16px; }
+  .share-btn--secondary { font-size: 13px; margin-left: 0; }
+  .win-actions { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+  .share-out { font-size: 10px; letter-spacing: 1.2px; }
+  .postal-modal { padding: 16px; }
+  .postal-modal-inner { gap: 14px; }
+  .postal-action-btn { font-size: 15px; }
+  .postal-close { font-size: 13px; }
+  .screen-howto .display { font-size: clamp(36px, 11vw, 56px); }
+  .howto-steps {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    margin: 22px 0 26px;
+  }
+  .howto-step {
+    grid-template-columns: 36px 1fr;
+    gap: 12px;
+    padding-top: 12px;
+  }
+  .howto-num { font-size: 22px; }
+  .howto-body p { font-size: 15px; line-height: 1.55; }
+  .howto-back-link { font-size: 15px; }
+  .counters-block { align-items: center; gap: 6px; }
+  .howto-link { font-size: 12px; }
+}
 
 /* ────────────────────── REDUCED MOTION ────────────────────── */
 

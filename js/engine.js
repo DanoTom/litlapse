@@ -2,26 +2,8 @@
  * litlapse · engine.js
  * --------------------------------------------------------------
  * Motor de presentación. Render del fragmento como casilleros de
- * letras (slots) y conexión con el estado deductivo.
- *
- * Selectores que espera (todos opcionales: si no están, se ignoran):
- *
- *   [data-litlapse="fragment"]       contenedor del párrafo con elipsis
- *   [data-litlapse="input"]          <input> de texto
- *   [data-litlapse="form"]           <form> que envuelve al input
- *   [data-litlapse="susurro"]        contenedor de letras descolocadas
- *   [data-litlapse="graveyard"]      contenedor del cementerio
- *   [data-litlapse="attempts"]       intento global (suma de todos)
- *   [data-litlapse="found"]          palabras halladas (n/3)
- *   [data-litlapse="word-attempts"]  intentos en la palabra activa (k/6)
- *   [data-litlapse="hint-btn"]       botón de pista (diccionario)
- *   [data-litlapse="hint-out"]       contenedor donde aparece la pista
- *   [data-litlapse="share-btn"]      botón de compartir (victoria)
- *   [data-litlapse="share-out"]      feedback "copiado al portapapeles"
- *   [data-litlapse="screen-play"]    pantalla "jugando"
- *   [data-litlapse="screen-win"]     pantalla "eclipse resuelto"
- *   [data-litlapse="screen-lose"]    pantalla "derrota"
- *   [data-litlapse="attribution"]    bloque autor/obra/año
+ * letras (slots), conexión con el estado deductivo, modal de postal
+ * y pantalla "cómo se juega".
  * --------------------------------------------------------------
  */
 (function (global) {
@@ -40,10 +22,7 @@
       this.els = this._querySelectores();
       this.tokens = Utils.tokenize(puzzle.textoOriginal);
 
-      // Posiciones recién fijadas en el último intento: el render las usa
-      // para gatillar la animación de fade-in sólo en esas letras.
-      this._fijadasFrescas = new Map(); // slotIndex → Set<posición>
-
+      this._fijadasFrescas = new Map();
       this.state.onChange = () => this.render();
 
       this._enlazarEventos();
@@ -71,10 +50,22 @@
         hintOut: $('[data-litlapse="hint-out"]'),
         shareBtn: $('[data-litlapse="share-btn"]'),
         shareOut: $('[data-litlapse="share-out"]'),
+        imageBtn: $('[data-litlapse="image-btn"]'),
         screenPlay: $('[data-litlapse="screen-play"]'),
         screenWin: $('[data-litlapse="screen-win"]'),
         screenLose: $('[data-litlapse="screen-lose"]'),
-        attribution: $('[data-litlapse="attribution"]')
+        screenHowto: $('[data-litlapse="screen-howto"]'),
+        howtoLink: $('[data-litlapse="howto-link"]'),
+        howtoBack: $('[data-litlapse="howto-back"]'),
+        attribution: $('[data-litlapse="attribution"]'),
+        postalModal: $('[data-litlapse="postal-modal"]'),
+        postalStage: $('[data-litlapse="postal-stage"]'),
+        postalWrap: $('[data-litlapse="postal-wrap"]'),
+        postalPreview: $('[data-litlapse="postal-preview"]'),
+        postalCapture: $('[data-litlapse="postal-capture"]'),
+        postalShareBtn: $('[data-litlapse="postal-share-btn"]'),
+        postalCloseBtn: $('[data-litlapse="postal-close-btn"]'),
+        postalOut: $('[data-litlapse="postal-out"]')
       };
     }
 
@@ -105,9 +96,81 @@
       if (shareBtn) {
         shareBtn.addEventListener('click', (e) => {
           e.preventDefault();
-          this._compartir();
+          this._compartirResultado();
         });
       }
+
+      const { imageBtn, postalShareBtn, postalCloseBtn, postalModal } = this.els;
+      if (imageBtn) {
+        imageBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          this._abrirPostal();
+        });
+      }
+      if (postalShareBtn) {
+        postalShareBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          this._compartirImagen();
+        });
+      }
+      if (postalCloseBtn) {
+        postalCloseBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          this._cerrarPostal();
+        });
+      }
+      if (postalModal) {
+        postalModal.addEventListener('click', (e) => {
+          if (e.target === postalModal) this._cerrarPostal();
+        });
+      }
+
+      const { howtoLink, howtoBack, screenHowto } = this.els;
+      if (howtoLink) {
+        howtoLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          this._abrirHowto();
+        });
+      }
+      if (howtoBack) {
+        howtoBack.addEventListener('click', (e) => {
+          e.preventDefault();
+          this._cerrarHowto();
+        });
+      }
+
+      this.root.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (postalModal && !postalModal.hidden) {
+          this._cerrarPostal();
+        } else if (screenHowto && !screenHowto.hidden) {
+          this._cerrarHowto();
+        }
+      });
+      global.addEventListener('resize', () => {
+        if (postalModal && !postalModal.hidden) this._escalarPostal();
+      });
+    }
+
+    // ──────────────────────────── cómo se juega ──
+
+    _abrirHowto() {
+      const { screenHowto, screenPlay, screenWin, screenLose } = this.els;
+      if (!screenHowto) return;
+      if (screenPlay) screenPlay.hidden = true;
+      if (screenWin) screenWin.hidden = true;
+      if (screenLose) screenLose.hidden = true;
+      screenHowto.hidden = false;
+      global.document.body.classList.add('in-howto');
+      global.scrollTo(0, 0);
+    }
+
+    _cerrarHowto() {
+      const { screenHowto } = this.els;
+      if (!screenHowto) return;
+      screenHowto.hidden = true;
+      global.document.body.classList.remove('in-howto');
+      this.render();
     }
 
     // ──────────────────────────── entrada del usuario ──
@@ -120,7 +183,6 @@
       const resultado = this.state.intentar(valor);
 
       if (resultado.tipo === 'LARGO_INVALIDO') {
-        // No consume intento; sólo vibra para indicar el rechazo.
         this._vibrar(input);
         this._mensajeBreve(resultado.motivo);
         return;
@@ -141,7 +203,6 @@
         return;
       }
 
-      // IGNORADO u otros: limpiar y seguir.
       input.value = '';
     }
 
@@ -206,17 +267,100 @@
       out.classList.add('is-visible');
     }
 
-    async _compartir() {
+    async _compartirResultado() {
       if (this.state.status !== STATUS.VICTORIA) return;
       const texto = Share.build(this.puzzle, this.state.snapshot());
       const ok = await Share.copiar(texto);
       const out = this.els.shareOut;
       if (out) {
         out.textContent = ok
-          ? 'Copiado al portapapeles.'
+          ? 'Resultado copiado al portapapeles.'
           : 'No se pudo copiar. Copia manual:\n' + texto;
         out.classList.add('is-visible');
       }
+    }
+
+    // ──────────────────────────── postal visual ──
+
+    _abrirPostal() {
+      if (this.state.status !== STATUS.VICTORIA) return;
+      const html = this._postalHtml();
+      if (this.els.postalPreview) this.els.postalPreview.innerHTML = html;
+      if (this.els.postalCapture) this.els.postalCapture.innerHTML = html;
+      const modal = this.els.postalModal;
+      if (!modal) return;
+      modal.hidden = false;
+      this._escalarPostal();
+      global.document.body.style.overflow = 'hidden';
+      if (this.els.postalOut) {
+        this.els.postalOut.textContent = '';
+      }
+    }
+
+    _cerrarPostal() {
+      const modal = this.els.postalModal;
+      if (!modal) return;
+      modal.hidden = true;
+      global.document.body.style.overflow = '';
+    }
+
+    _escalarPostal() {
+      const wrap = this.els.postalWrap;
+      const stage = this.els.postalStage;
+      if (!wrap || !stage) return;
+      const margenVertical = 200;
+      const margenLateral = 48;
+      const vh = Math.max(400, global.innerHeight - margenVertical);
+      const vw = Math.max(280, global.innerWidth - margenLateral);
+      const escala = Math.min(1, vh / 960, vw / 540);
+      wrap.style.transform = `scale(${escala})`;
+      stage.style.width = `${540 * escala}px`;
+      stage.style.height = `${960 * escala}px`;
+    }
+
+    async _compartirImagen() {
+      const out = this.els.postalOut;
+      const setOut = (txt) => { if (out) out.textContent = txt; };
+      if (!this.els.postalCapture) { setOut('Sin postal disponible.'); return; }
+      setOut('Generando imagen…');
+      const r = await Share.compartirImagen(this.els.postalCapture, this.puzzle);
+      if (!r.ok) {
+        setOut('No se pudo generar la imagen.');
+        return;
+      }
+      setOut(r.modo === 'share' ? '' : 'Imagen descargada.');
+    }
+
+    _postalHtml() {
+      const ocultas = new Map();
+      this.puzzle.palabrasOcultas.forEach((p, slot) => {
+        ocultas.set(p.indicePalabra, { ...p, slot });
+      });
+      const fragmento = this.tokens.map((token, i) => {
+        if (!ocultas.has(i)) return Utils.escapeHtml(token);
+        const { prefijo, raiz, sufijo } = Utils.splitPunctuation(token);
+        return `${Utils.escapeHtml(prefijo)}<span class="postal-revealed">${Utils.escapeHtml(raiz)}</span>${Utils.escapeHtml(sufijo)}`;
+      }).join(' ');
+
+      const idStr = String(this.puzzle.id).padStart(2, '0');
+      const intentos = this.state.totalIntentos;
+      const intentoStr = `${intentos} intento${intentos === 1 ? '' : 's'}`;
+
+      return [
+        `<div class="postal-mark">`,
+          `<span class="postal-logo">L I T L A P S E</span>`,
+          `<span class="postal-num">№${idStr}</span>`,
+        `</div>`,
+        `<p class="postal-frag">${fragmento}</p>`,
+        `<div class="postal-attrib">`,
+          `${Utils.escapeHtml(this.puzzle.autor)}`,
+          `<em>${Utils.escapeHtml(this.puzzle.obra)} · ${Utils.escapeHtml(this.puzzle['año'])}</em>`,
+        `</div>`,
+        `<div class="postal-foot">`,
+          `<span>Litlapse #${this.puzzle.id} · resuelto en ${intentoStr}</span>`,
+          `<span class="postal-seal">L</span>`,
+        `</div>`
+      ].join('');
     }
 
     // ──────────────────────────── render ──
@@ -230,13 +374,13 @@
       this._renderAtribucion();
       this._renderBotonesEstado();
       this._ajustarInputAlSlot();
-      // Limpiar el set de fijadas frescas DESPUÉS de renderizar; así
-      // el próximo render no vuelve a animar las mismas letras.
       this._fijadasFrescas = new Map();
     }
 
     _renderPantalla() {
-      const { screenPlay, screenWin, screenLose } = this.els;
+      const { screenHowto, screenPlay, screenWin, screenLose } = this.els;
+      // Si el usuario está leyendo "cómo se juega", no tocamos las pantallas.
+      if (screenHowto && !screenHowto.hidden) return;
       const s = this.state.status;
       const toggle = (el, on) => {
         if (!el) return;
@@ -278,7 +422,6 @@
       const frescas = this._fijadasFrescas.get(slotIndex) || new Set();
       const aria = `palabra ${slotIndex + 1} de ${this.state.totalPalabras}`;
 
-      // Derrota con palabra sin completar: revelar tachado en italic.
       if (status === STATUS.DERROTA && !slot.completada) {
         const texto = Utils.escapeHtml(slot.canon.join(''));
         return `<span class="elipsis revelada-fallida" data-slot="${slotIndex}" aria-label="${aria}">${texto}</span>`;
@@ -311,8 +454,6 @@
         host.classList.remove('is-visible');
         return;
       }
-      // Filtrar: si todas las ocurrencias de una letra ya están fijadas
-      // en el fragmento, no la susurramos (ya se ve).
       const vigentes = slot.contiene.filter((ch) =>
         slot.norm.some((c, k) => c === ch && !slot.fijadas[k])
       );
@@ -339,13 +480,8 @@
         host.classList.remove('is-populated');
         return;
       }
-      // Para opacar letras inexistentes usamos la palabra activa como
-      // referencia. Al avanzar de slot, la categorización se recalcula
-      // automáticamente en el próximo render.
       const slotRef = this.state.slotActivo;
-      const setObjetivo = slotRef
-        ? new Set(slotRef.norm)
-        : null;
+      const setObjetivo = slotRef ? new Set(slotRef.norm) : null;
 
       const items = palabras.map((w) => {
         const letras = Array.from(w).map((ch) => {
@@ -386,10 +522,12 @@
     }
 
     _renderBotonesEstado() {
-      const { hintBtn, shareBtn, input } = this.els;
+      const { hintBtn, shareBtn, imageBtn, input } = this.els;
       if (hintBtn) hintBtn.disabled = this.state.terminada;
       if (input) input.disabled = this.state.terminada;
-      if (shareBtn) shareBtn.hidden = this.state.status !== STATUS.VICTORIA;
+      const enVictoria = this.state.status === STATUS.VICTORIA;
+      if (shareBtn) shareBtn.hidden = !enVictoria;
+      if (imageBtn) imageBtn.hidden = !enVictoria;
     }
   }
 
