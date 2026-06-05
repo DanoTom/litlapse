@@ -48,6 +48,8 @@
         <span class="input-hint">tu palabra · ↵</span>
       </form>
 
+      <p data-litlapse="susurro" class="susurro" role="status" aria-live="polite"></p>
+
       <div class="aux">
         <button data-litlapse="hint-btn" class="hint-btn" type="button">¿pista?</button>
         <p data-litlapse="hint-out" class="hint-out" role="status" aria-live="polite"></p>
@@ -58,7 +60,7 @@
     <section data-litlapse="screen-win" class="screen screen-win" hidden>
       <h1 class="display">Eclipse resuelto.</h1>
       <article class="fragment-wrap">
-        <p data-litlapse="fragment-win" class="fragment fragment-win"></p>
+        <p data-litlapse="fragment" class="fragment fragment-win"></p>
       </article>
       <div data-litlapse="attribution" class="attribution"></div>
       <div class="win-actions">
@@ -70,9 +72,9 @@
     <!-- ───────── pantalla derrota ───────── -->
     <section data-litlapse="screen-lose" class="screen screen-lose" hidden>
       <h1 class="display">El eclipse se cierra.</h1>
-      <p class="subtitle"><em>Vuelve mañana al próximo fragmento.</em></p>
+      <p class="subtitle"><em>Las palabras eran éstas. Vuelve mañana al próximo fragmento.</em></p>
       <article class="fragment-wrap">
-        <p class="fragment fragment-lose">Las palabras eran:</p>
+        <p data-litlapse="fragment" class="fragment fragment-lose"></p>
       </article>
       <div data-litlapse="attribution" class="attribution"></div>
     </section>
@@ -83,9 +85,9 @@
       <div class="counters">
         <span>Intento <strong data-litlapse="attempts">0</strong></span>
         <span>·</span>
-        <span><strong data-litlapse="found">0/3</strong></span>
+        <span><strong data-litlapse="found">0/3</strong> hallada</span>
         <span>·</span>
-        <span>Vidas <strong data-litlapse="lives">6</strong></span>
+        <span><strong data-litlapse="word-attempts">0/6</strong> en esta palabra</span>
       </div>
     </footer>
   </main>

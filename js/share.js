@@ -67,10 +67,8 @@
    * de estado (ver GameState#snapshot).
    */
   function build(puzzle, snapshot) {
-    const intentos = (snapshot.intentosPorPalabra || []).reduce(
-      (acc, xs) => acc + (Array.isArray(xs) ? xs.length : 0),
-      0
-    );
+    const slots = Array.isArray(snapshot.slots) ? snapshot.slots : [];
+    const intentos = slots.reduce((acc, s) => acc + (s && typeof s.intentos === 'number' ? s.intentos : 0), 0);
     const teaser = _teaser(puzzle);
     const pistas = _linePistas(snapshot.pistasUsadas || 0);
 
