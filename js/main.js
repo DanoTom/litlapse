@@ -3,13 +3,14 @@
  * --------------------------------------------------------------
  * Bootstrap. Selecciona el eclipse del día, instancia el estado
  * (con rehidratación desde localStorage) y monta el motor sobre
- * el DOM. Si la partida del día ya está en VICTORIA al cargar,
- * el motor renderiza directamente la postal sin pasar por el
- * flujo de juego.
+ * el DOM. La primera visita abre automáticamente "Cómo se juega"
+ * para que el jugador entienda la mecánica antes del primer intento.
  * --------------------------------------------------------------
  */
 (function (global) {
   'use strict';
+
+  const FLAG_VISITADO = 'litlapse:visited';
 
   function arrancar() {
     const { Puzzles, State, Engine } = global.Litlapse;
@@ -23,8 +24,17 @@
       root: global.document,
       modoPista: 'diccionario'
     });
-    // Expuesto sólo para inspección manual en consola; no es API pública.
     global.Litlapse.__debug = { puzzle, state, engine };
+
+    // Onboarding silencioso: la primera vez que entra alguien (en este
+    // navegador), abrimos el manual. Si el localStorage está deshabilitado
+    // o el flag ya fue seteado, no pasa nada.
+    try {
+      if (!global.localStorage.getItem(FLAG_VISITADO)) {
+        engine._abrirHowto();
+        global.localStorage.setItem(FLAG_VISITADO, '1');
+      }
+    } catch (_e) { /* silent */ }
   }
 
   if (global.document.readyState === 'loading') {
