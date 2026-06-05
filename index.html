@@ -64,7 +64,8 @@
       </article>
       <div data-litlapse="attribution" class="attribution"></div>
       <div class="win-actions">
-        <button data-litlapse="share-btn" class="share-btn" type="button">copiar postal</button>
+        <button data-litlapse="image-btn" class="share-btn" type="button">ver postal</button>
+        <button data-litlapse="share-btn" class="share-btn share-btn--secondary" type="button">compartir resultado</button>
         <p data-litlapse="share-out" class="share-out" role="status" aria-live="polite"></p>
       </div>
     </section>
@@ -92,6 +93,25 @@
     </footer>
   </main>
 
+  <!-- ───────── modal de postal (sólo visible en victoria) ───────── -->
+  <div data-litlapse="postal-modal" class="postal-modal" hidden role="dialog" aria-modal="true" aria-label="Postal del eclipse">
+    <div class="postal-modal-inner">
+      <div data-litlapse="postal-stage" class="postal-stage">
+        <div data-litlapse="postal-wrap" class="postal-wrap">
+          <div data-litlapse="postal-preview" class="postal"></div>
+        </div>
+      </div>
+      <div class="postal-actions">
+        <button data-litlapse="postal-share-btn" class="postal-action-btn" type="button">compartir o guardar</button>
+        <button data-litlapse="postal-close-btn" class="postal-action-btn postal-close" type="button">cerrar</button>
+      </div>
+      <p data-litlapse="postal-out" class="postal-out" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <!-- Postal espejo, fuera de pantalla, sólo para captura a PNG a su tamaño nativo. -->
+  <div data-litlapse="postal-capture" class="postal postal-capture" aria-hidden="true"></div>
+
   <!-- orden estricto de dependencias -->
   <script src="js/puzzles.js"></script>
   <script src="js/utils.js"></script>
@@ -100,5 +120,8 @@
   <script src="js/share.js"></script>
   <script src="js/engine.js"></script>
   <script src="js/main.js"></script>
+
+  <!-- Captura DOM → PNG para la postal compartible. -->
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.min.js"></script>
 </body>
 </html>

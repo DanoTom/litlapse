@@ -71,10 +71,19 @@
         hintOut: $('[data-litlapse="hint-out"]'),
         shareBtn: $('[data-litlapse="share-btn"]'),
         shareOut: $('[data-litlapse="share-out"]'),
+        imageBtn: $('[data-litlapse="image-btn"]'),
         screenPlay: $('[data-litlapse="screen-play"]'),
         screenWin: $('[data-litlapse="screen-win"]'),
         screenLose: $('[data-litlapse="screen-lose"]'),
-        attribution: $('[data-litlapse="attribution"]')
+        attribution: $('[data-litlapse="attribution"]'),
+        postalModal: $('[data-litlapse="postal-modal"]'),
+        postalStage: $('[data-litlapse="postal-stage"]'),
+        postalWrap: $('[data-litlapse="postal-wrap"]'),
+        postalPreview: $('[data-litlapse="postal-preview"]'),
+        postalCapture: $('[data-litlapse="postal-capture"]'),
+        postalShareBtn: $('[data-litlapse="postal-share-btn"]'),
+        postalCloseBtn: $('[data-litlapse="postal-close-btn"]'),
+        postalOut: $('[data-litlapse="postal-out"]')
       };
     }
 
@@ -105,9 +114,43 @@
       if (shareBtn) {
         shareBtn.addEventListener('click', (e) => {
           e.preventDefault();
-          this._compartir();
+          this._compartirResultado();
         });
       }
+
+      const { imageBtn, postalShareBtn, postalCloseBtn, postalModal } = this.els;
+      if (imageBtn) {
+        imageBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          this._abrirPostal();
+        });
+      }
+      if (postalShareBtn) {
+        postalShareBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          this._compartirImagen();
+        });
+      }
+      if (postalCloseBtn) {
+        postalCloseBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          this._cerrarPostal();
+        });
+      }
+      if (postalModal) {
+        // Click en el backdrop (no en el contenido) cierra el modal.
+        postalModal.addEventListener('click', (e) => {
+          if (e.target === postalModal) this._cerrarPostal();
+        });
+      }
+      this.root.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && postalModal && !postalModal.hidden) {
+          this._cerrarPostal();
+        }
+      });
+      global.addEventListener('resize', () => {
+        if (postalModal && !postalModal.hidden) this._escalarPostal();
+      });
     }
 
     // ──────────────────────────── entrada del usuario ──
@@ -206,17 +249,105 @@
       out.classList.add('is-visible');
     }
 
-    async _compartir() {
+    async _compartirResultado() {
       if (this.state.status !== STATUS.VICTORIA) return;
       const texto = Share.build(this.puzzle, this.state.snapshot());
       const ok = await Share.copiar(texto);
       const out = this.els.shareOut;
       if (out) {
         out.textContent = ok
-          ? 'Copiado al portapapeles.'
+          ? 'Resultado copiado al portapapeles.'
           : 'No se pudo copiar. Copia manual:\n' + texto;
         out.classList.add('is-visible');
       }
+    }
+
+    // ──────────────────────────── postal visual ──
+
+    _abrirPostal() {
+      if (this.state.status !== STATUS.VICTORIA) return;
+      const html = this._postalHtml();
+      if (this.els.postalPreview) this.els.postalPreview.innerHTML = html;
+      if (this.els.postalCapture) this.els.postalCapture.innerHTML = html;
+      const modal = this.els.postalModal;
+      if (!modal) return;
+      modal.hidden = false;
+      this._escalarPostal();
+      global.document.body.style.overflow = 'hidden';
+      if (this.els.postalOut) {
+        this.els.postalOut.textContent = '';
+      }
+    }
+
+    _cerrarPostal() {
+      const modal = this.els.postalModal;
+      if (!modal) return;
+      modal.hidden = true;
+      global.document.body.style.overflow = '';
+    }
+
+    /**
+     * La postal tiene tamaño nativo 540×960. En pantallas chicas la
+     * escalamos con `transform: scale(k)` y ajustamos el stage para
+     * que ocupe el tamaño efectivo (sin dejar hueco vacío).
+     */
+    _escalarPostal() {
+      const wrap = this.els.postalWrap;
+      const stage = this.els.postalStage;
+      if (!wrap || !stage) return;
+      const margenVertical = 200;  // botones + padding del modal
+      const margenLateral = 48;
+      const vh = Math.max(400, global.innerHeight - margenVertical);
+      const vw = Math.max(280, global.innerWidth - margenLateral);
+      const escala = Math.min(1, vh / 960, vw / 540);
+      wrap.style.transform = `scale(${escala})`;
+      stage.style.width = `${540 * escala}px`;
+      stage.style.height = `${960 * escala}px`;
+    }
+
+    async _compartirImagen() {
+      const out = this.els.postalOut;
+      const setOut = (txt) => { if (out) out.textContent = txt; };
+      if (!this.els.postalCapture) { setOut('Sin postal disponible.'); return; }
+      setOut('Generando imagen…');
+      const r = await Share.compartirImagen(this.els.postalCapture, this.puzzle);
+      if (!r.ok) {
+        setOut('No se pudo generar la imagen.');
+        return;
+      }
+      setOut(r.modo === 'share' ? '' : 'Imagen descargada.');
+    }
+
+    _postalHtml() {
+      const ocultas = new Map();
+      this.puzzle.palabrasOcultas.forEach((p, slot) => {
+        ocultas.set(p.indicePalabra, { ...p, slot });
+      });
+      const fragmento = this.tokens.map((token, i) => {
+        if (!ocultas.has(i)) return Utils.escapeHtml(token);
+        const { prefijo, raiz, sufijo } = Utils.splitPunctuation(token);
+        return `${Utils.escapeHtml(prefijo)}<span class="postal-revealed">${Utils.escapeHtml(raiz)}</span>${Utils.escapeHtml(sufijo)}`;
+      }).join(' ');
+
+      const idStr = String(this.puzzle.id).padStart(2, '0');
+      const intentos = this.state.totalIntentos;
+      const intentoStr = `${intentos} intento${intentos === 1 ? '' : 's'}`;
+
+      return [
+        `<div class="postal-mark">`,
+          `<span class="postal-logo">L I T L A P S E</span>`,
+          `<span class="postal-num">№${idStr}</span>`,
+        `</div>`,
+        `<p class="postal-frag">${fragmento}</p>`,
+        `<div class="postal-attrib">`,
+          `${Utils.escapeHtml(this.puzzle.autor)}`,
+          `<em>${Utils.escapeHtml(this.puzzle.obra)} · ${Utils.escapeHtml(this.puzzle['año'])}</em>`,
+        `</div>`,
+        `<div class="postal-foot">`,
+          `<span>Litlapse #${this.puzzle.id} · resuelto en ${intentoStr}</span>`,
+          `<span class="postal-seal">L</span>`,
+        `</div>`
+      ].join('');
     }
 
     // ──────────────────────────── render ──
@@ -386,10 +517,12 @@
     }
 
     _renderBotonesEstado() {
-      const { hintBtn, shareBtn, input } = this.els;
+      const { hintBtn, shareBtn, imageBtn, input } = this.els;
       if (hintBtn) hintBtn.disabled = this.state.terminada;
       if (input) input.disabled = this.state.terminada;
-      if (shareBtn) shareBtn.hidden = this.state.status !== STATUS.VICTORIA;
+      const enVictoria = this.state.status === STATUS.VICTORIA;
+      if (shareBtn) shareBtn.hidden = !enVictoria;
+      if (imageBtn) imageBtn.hidden = !enVictoria;
     }
   }
 

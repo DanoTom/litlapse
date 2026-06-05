@@ -285,6 +285,12 @@ body { font-family: var(--sans); }
   border-bottom: 1px solid var(--ink);
   cursor: pointer; padding: 0 0 2px;
 }
+.share-btn--secondary {
+  font-size: 14px;
+  color: var(--ink-soft);
+  border-bottom-color: var(--ink-faint);
+  margin-left: 22px;
+}
 .share-out {
   font-family: var(--sans); font-size: 11px;
   letter-spacing: 1.5px; text-transform: uppercase;
@@ -293,6 +299,174 @@ body { font-family: var(--sans); }
   white-space: pre-wrap;
 }
 .share-out.is-visible { opacity: 1; }
+
+/* ────────────────────── POSTAL (540×960) ────────────────────── */
+
+/* Tamaño y composición fijos: la captura se hace siempre a estas
+   dimensiones nativas. El preview en el modal se escala con transform. */
+.postal {
+  width: 540px;
+  height: 960px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--serif);
+  padding: 70px 56px 44px;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 28px;
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.postal-mark {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--sans);
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.postal-logo { font-weight: 500; }
+.postal-num  { letter-spacing: 1.5px; color: var(--ink-soft); }
+
+.postal-frag {
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.7;
+  margin: 0;
+  text-align: center;
+  align-self: center;
+  color: var(--ink);
+}
+.postal-revealed {
+  border-bottom: 1px dotted var(--ink-faint);
+  font-weight: 500;
+}
+
+.postal-attrib {
+  text-align: center;
+  font-family: var(--sans);
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--ink);
+  line-height: 1.6;
+}
+.postal-attrib em {
+  display: block;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-soft);
+  margin-top: 4px;
+}
+
+.postal-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans);
+  font-size: 9px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.postal-seal {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+}
+
+/* Postal-espejo offscreen para la captura: existe en el DOM pero el
+   usuario no la ve. html-to-image la lee a su tamaño nativo. */
+.postal-capture {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  pointer-events: none;
+}
+
+/* ────────────────────── MODAL DE POSTAL ────────────────────── */
+
+.postal-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(36, 34, 32, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+.postal-modal[hidden] { display: none; }
+.postal-modal-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  max-width: 100%;
+}
+/* El stage ocupa el tamaño efectivo (escalado); el wrap mantiene el
+   tamaño nativo y se escala con transform. JS setea ambos. */
+.postal-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.postal-wrap {
+  width: 540px;
+  height: 960px;
+  transform-origin: top left;
+}
+
+.postal-actions {
+  display: flex;
+  gap: 22px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.postal-action-btn {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--paper);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--paper);
+  cursor: pointer;
+  padding: 0 0 2px;
+}
+.postal-close {
+  font-size: 14px;
+  color: rgba(251, 249, 245, 0.55);
+  border-bottom-color: rgba(251, 249, 245, 0.3);
+}
+.postal-out {
+  font-family: var(--sans);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(251, 249, 245, 0.7);
+  margin: 0;
+  min-height: 1em;
+}
 
 /* ────────────────────── MÓVIL (≤ 720px) ────────────────────── */
 
@@ -381,7 +555,15 @@ body { font-family: var(--sans); }
   .litlapse-work { font-size: 14px; }
 
   .share-btn { font-size: 16px; }
+  .share-btn--secondary { font-size: 13px; margin-left: 0; }
+  .win-actions { display: flex; flex-direction: column; gap: 14px; align-items: center; }
   .share-out { font-size: 10px; letter-spacing: 1.2px; }
+
+  /* Modal de postal: menos padding para ganar lugar al previewearla. */
+  .postal-modal { padding: 16px; }
+  .postal-modal-inner { gap: 14px; }
+  .postal-action-btn { font-size: 15px; }
+  .postal-close { font-size: 13px; }
 }
 
 /* ────────────────────── REDUCED MOTION ────────────────────── */
