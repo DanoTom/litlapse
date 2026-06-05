@@ -2,8 +2,26 @@
  * litlapse · engine.js
  * --------------------------------------------------------------
  * Motor de presentación. Render del fragmento como casilleros de
- * letras (slots), conexión con el estado deductivo, modal de postal
- * y pantalla "cómo se juega".
+ * letras (slots) y conexión con el estado deductivo.
+ *
+ * Selectores que espera (todos opcionales: si no están, se ignoran):
+ *
+ *   [data-litlapse="fragment"]       contenedor del párrafo con elipsis
+ *   [data-litlapse="input"]          <input> de texto
+ *   [data-litlapse="form"]           <form> que envuelve al input
+ *   [data-litlapse="susurro"]        contenedor de letras descolocadas
+ *   [data-litlapse="graveyard"]      contenedor del cementerio
+ *   [data-litlapse="attempts"]       intento global (suma de todos)
+ *   [data-litlapse="found"]          palabras halladas (n/3)
+ *   [data-litlapse="word-attempts"]  intentos en la palabra activa (k/6)
+ *   [data-litlapse="hint-btn"]       botón de pista (diccionario)
+ *   [data-litlapse="hint-out"]       contenedor donde aparece la pista
+ *   [data-litlapse="share-btn"]      botón de compartir (victoria)
+ *   [data-litlapse="share-out"]      feedback "copiado al portapapeles"
+ *   [data-litlapse="screen-play"]    pantalla "jugando"
+ *   [data-litlapse="screen-win"]     pantalla "eclipse resuelto"
+ *   [data-litlapse="screen-lose"]    pantalla "derrota"
+ *   [data-litlapse="attribution"]    bloque autor/obra/año
  * --------------------------------------------------------------
  */
 (function (global) {
@@ -22,7 +40,10 @@
       this.els = this._querySelectores();
       this.tokens = Utils.tokenize(puzzle.textoOriginal);
 
-      this._fijadasFrescas = new Map();
+      // Posiciones recién fijadas en el último intento: el render las usa
+      // para gatillar la animación de fade-in sólo en esas letras.
+      this._fijadasFrescas = new Map(); // slotIndex → Set<posición>
+
       this.state.onChange = () => this.render();
 
       this._enlazarEventos();
@@ -30,6 +51,8 @@
       this.render();
       this._enfocarInput();
     }
+
+    // ──────────────────────────── DOM lookup ──
 
     _querySelectores() {
       const $ = (sel) => this.root.querySelector(sel);
@@ -118,11 +141,11 @@
         });
       }
       if (postalModal) {
+        // Click en el backdrop (no en el contenido) cierra el modal.
         postalModal.addEventListener('click', (e) => {
           if (e.target === postalModal) this._cerrarPostal();
         });
       }
-
       const { howtoLink, howtoBack, screenHowto } = this.els;
       if (howtoLink) {
         howtoLink.addEventListener('click', (e) => {
@@ -150,6 +173,8 @@
       });
     }
 
+    // ──────────────────────────── cómo se juega ──
+
     _abrirHowto() {
       const { screenHowto, screenPlay, screenWin, screenLose } = this.els;
       if (!screenHowto) return;
@@ -166,8 +191,11 @@
       if (!screenHowto) return;
       screenHowto.hidden = true;
       global.document.body.classList.remove('in-howto');
+      // Restaura la pantalla correcta según el estado.
       this.render();
     }
+
+    // ──────────────────────────── entrada del usuario ──
 
     _procesarEntrada() {
       const input = this.els.input;
@@ -177,6 +205,7 @@
       const resultado = this.state.intentar(valor);
 
       if (resultado.tipo === 'LARGO_INVALIDO') {
+        // No consume intento; sólo vibra para indicar el rechazo.
         this._vibrar(input);
         this._mensajeBreve(resultado.motivo);
         return;
@@ -197,6 +226,7 @@
         return;
       }
 
+      // IGNORADO u otros: limpiar y seguir.
       input.value = '';
     }
 
@@ -274,6 +304,8 @@
       }
     }
 
+    // ──────────────────────────── postal visual ──
+
     _abrirPostal() {
       if (this.state.status !== STATUS.VICTORIA) return;
       const html = this._postalHtml();
@@ -296,6 +328,11 @@
       global.document.body.style.overflow = '';
     }
 
+    /**
+     * La postal tiene tamaño nativo 540×960. En pantallas chicas la
+     * escalamos con `transform: scale(k)` y ajustamos el stage para
+     * que ocupe el tamaño efectivo (sin dejar hueco vacío).
+     */
     _escalarPostal() {
       const wrap = this.els.postalWrap;
       const stage = this.els.postalStage;
@@ -314,14 +351,43 @@
     async _compartirImagen() {
       const out = this.els.postalOut;
       const setOut = (txt) => { if (out) out.textContent = txt; };
-      if (!this.els.postalCapture) { setOut('Sin postal disponible.'); return; }
-      setOut('Generando imagen…');
-      const r = await Share.compartirImagen(this.els.postalCapture, this.puzzle);
-      if (!r.ok) {
-        setOut('No se pudo generar la imagen.');
+      if (!global.htmlToImage) {
+        setOut('No se pudo cargar el motor de imagen.');
         return;
       }
-      setOut(r.modo === 'share' ? '' : 'Imagen descargada.');
+      setOut('Generando imagen…');
+
+      // Renderizamos la postal en un container temporal a tamaño nativo.
+      // El wrapper tiene tamaño 0 con overflow:hidden, así no afecta el
+      // layout ni se ve. html-to-image captura el nodo `postal` con sus
+      // 540×960 nativos porque se basa en el getBoundingClientRect del
+      // nodo objetivo, no del wrapper.
+      //
+      // Este patrón es más robusto que mantener un elemento offscreen
+      // con position:fixed left:-10000px, porque html-to-image clona el
+      // elemento con esa posición y termina renderizando fuera del SVG
+      // → imagen vacía. (Ese era el bug que viste.)
+      const wrapper = global.document.createElement('div');
+      wrapper.setAttribute('aria-hidden', 'true');
+      wrapper.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;left:0;top:0;';
+      const postal = global.document.createElement('div');
+      postal.className = 'postal';
+      postal.innerHTML = this._postalHtml();
+      wrapper.appendChild(postal);
+      global.document.body.appendChild(wrapper);
+
+      try {
+        // Esperamos a que el browser termine el layout.
+        await new Promise((r) => global.requestAnimationFrame(r));
+        const result = await Share.compartirImagen(postal, this.puzzle);
+        if (!result.ok) {
+          setOut('No se pudo generar la imagen.');
+          return;
+        }
+        setOut(result.modo === 'share' ? '' : 'Imagen descargada.');
+      } finally {
+        wrapper.remove();
+      }
     }
 
     _postalHtml() {
@@ -356,6 +422,8 @@
       ].join('');
     }
 
+    // ──────────────────────────── render ──
+
     render() {
       this._renderPantalla();
       this._renderFragmento();
@@ -365,10 +433,13 @@
       this._renderAtribucion();
       this._renderBotonesEstado();
       this._ajustarInputAlSlot();
+      // Limpiar el set de fijadas frescas DESPUÉS de renderizar; así
+      // el próximo render no vuelve a animar las mismas letras.
       this._fijadasFrescas = new Map();
     }
 
     _renderPantalla() {
+      // Si el usuario está leyendo "cómo se juega", no tocamos las pantallas.
       const { screenHowto, screenPlay, screenWin, screenLose } = this.els;
       if (screenHowto && !screenHowto.hidden) return;
       const s = this.state.status;
@@ -412,6 +483,7 @@
       const frescas = this._fijadasFrescas.get(slotIndex) || new Set();
       const aria = `palabra ${slotIndex + 1} de ${this.state.totalPalabras}`;
 
+      // Derrota con palabra sin completar: revelar tachado en italic.
       if (status === STATUS.DERROTA && !slot.completada) {
         const texto = Utils.escapeHtml(slot.canon.join(''));
         return `<span class="elipsis revelada-fallida" data-slot="${slotIndex}" aria-label="${aria}">${texto}</span>`;
@@ -444,6 +516,8 @@
         host.classList.remove('is-visible');
         return;
       }
+      // Filtrar: si todas las ocurrencias de una letra ya están fijadas
+      // en el fragmento, no la susurramos (ya se ve).
       const vigentes = slot.contiene.filter((ch) =>
         slot.norm.some((c, k) => c === ch && !slot.fijadas[k])
       );
@@ -470,8 +544,13 @@
         host.classList.remove('is-populated');
         return;
       }
+      // Para opacar letras inexistentes usamos la palabra activa como
+      // referencia. Al avanzar de slot, la categorización se recalcula
+      // automáticamente en el próximo render.
       const slotRef = this.state.slotActivo;
-      const setObjetivo = slotRef ? new Set(slotRef.norm) : null;
+      const setObjetivo = slotRef
+        ? new Set(slotRef.norm)
+        : null;
 
       const items = palabras.map((w) => {
         const letras = Array.from(w).map((ch) => {
