@@ -74,17 +74,12 @@ body { font-family: var(--sans); }
 
 /* ────────────────────── ELIPSIS (casilleros letra a letra) ────────────────────── */
 
-/* Contenedor de slots de una palabra oculta. Inline-block para que el
-   texto del fragmento siga fluyendo con saltos de línea naturales. */
 .elipsis {
   display: inline-block;
   vertical-align: baseline;
   font-family: var(--serif);
   white-space: nowrap;
 }
-
-/* Cada casilla: una letra o un guion bajo a la espera. Anchura mínima
-   uniforme para que la palabra no salte al fijar letras nuevas. */
 .letra-slot {
   display: inline-block;
   min-width: 0.62em;
@@ -92,15 +87,11 @@ body { font-family: var(--sans); }
   font-weight: 400;
   margin: 0 0.06em;
 }
-
-/* Casillero vacío: guion bajo grueso. */
 .letra-slot.vacia {
   font-weight: 700;
   color: var(--ink);
 }
 .letra-slot.vacia::before { content: "_"; }
-
-/* Casillero con letra fijada. */
 .letra-slot.fijada {
   font-weight: 400;
   color: var(--ink);
@@ -112,10 +103,6 @@ body { font-family: var(--sans); }
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-
-/* Pulso suave de la elipsis activa, sólo en los slots vacíos.
-   55%↔100% para que respire sin distraer la lectura. Las letras
-   ya fijadas quedan firmes. */
 .elipsis.active .letra-slot.vacia {
   animation: pulseElipsis 2s ease-in-out infinite;
 }
@@ -123,10 +110,6 @@ body { font-family: var(--sans); }
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.55; }
 }
-
-/* Elipsis ya resuelta: colapsa el espaciado entre casillas para que la
-   palabra fluya como texto normal (sin "b e l l e z a" suelto) y deja
-   un border-bottom dotted continuo como huella editorial. */
 .elipsis.completada .letra-slot,
 .elipsis.en-victoria .letra-slot {
   margin: 0;
@@ -135,16 +118,10 @@ body { font-family: var(--sans); }
 .elipsis.completada .letra-slot.fijada {
   border-bottom: 1px dotted var(--ink-faint);
 }
-
-/* En la pantalla "victoria" el border-bottom punteado refuerza la
-   reseña tipográfica del handoff. */
 .elipsis.en-victoria .letra-slot.fijada {
   border-bottom: 1px dotted var(--ink-faint);
   padding-bottom: 1px;
 }
-
-/* En derrota, las palabras NO resueltas se muestran en italic tachadas
-   en su lugar. No usan casilleros: es una revelación final. */
 .elipsis.revelada-fallida {
   font-style: italic;
   text-decoration: line-through;
@@ -179,7 +156,7 @@ body { font-family: var(--sans); }
   color: var(--ink-soft);
 }
 
-/* ────────────────────── SUSURRO (letras descolocadas) ────────────────────── */
+/* ────────────────────── SUSURRO ────────────────────── */
 
 .susurro {
   font-family: var(--sans);
@@ -199,7 +176,7 @@ body { font-family: var(--sans); }
   margin-left: 4px;
 }
 
-/* ────────────────────── AUXILIO (pista de diccionario) ────────────────────── */
+/* ────────────────────── AUXILIO (pista) ────────────────────── */
 
 .aux { text-align: center; margin: 4px 0; }
 .hint-btn {
@@ -245,8 +222,6 @@ body { font-family: var(--sans); }
   font-style: inherit;
   display: inline;
 }
-/* Letra que no existe en la palabra activa: opacidad muy baja para que
-   el jugador la descarte de un vistazo. */
 .grave-palabra .letra-inexistente {
   opacity: 0.15;
 }
@@ -300,10 +275,88 @@ body { font-family: var(--sans); }
 }
 .share-out.is-visible { opacity: 1; }
 
+/* ────────────────────── CÓMO SE JUEGA ────────────────────── */
+
+.screen-howto .display {
+  font-size: clamp(40px, 7vw, 96px);
+  line-height: 0.92;
+}
+
+.howto-steps {
+  list-style: none;
+  margin: 28px 0 32px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 36px 56px;
+}
+.howto-step {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+.howto-num {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 28px;
+  color: var(--ink);
+  line-height: 1;
+}
+.howto-body h4 {
+  font-family: var(--sans);
+  font-size: 10px;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+.howto-body p {
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.55;
+  margin: 0;
+  color: var(--ink);
+}
+.howto-body em {
+  font-style: italic;
+  color: var(--ink-soft);
+}
+.howto-back {
+  text-align: center;
+  margin: 8px 0 0;
+}
+.howto-back-link {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 1px;
+}
+
+.counters-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.howto-link {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-bottom: 1px solid var(--ink-faint);
+  padding-bottom: 1px;
+}
+body.in-howto .bottombar { display: none; }
+
 /* ────────────────────── POSTAL (540×960) ────────────────────── */
 
-/* Tamaño y composición fijos: la captura se hace siempre a estas
-   dimensiones nativas. El preview en el modal se escala con transform. */
 .postal {
   width: 540px;
   height: 960px;
@@ -330,7 +383,6 @@ body { font-family: var(--sans); }
 }
 .postal-logo { font-weight: 500; }
 .postal-num  { letter-spacing: 1.5px; color: var(--ink-soft); }
-
 .postal-frag {
   font-family: var(--serif);
   font-size: 22px;
@@ -344,7 +396,6 @@ body { font-family: var(--sans); }
   border-bottom: 1px dotted var(--ink-faint);
   font-weight: 500;
 }
-
 .postal-attrib {
   text-align: center;
   font-family: var(--sans);
@@ -364,7 +415,6 @@ body { font-family: var(--sans); }
   color: var(--ink-soft);
   margin-top: 4px;
 }
-
 .postal-foot {
   display: flex;
   justify-content: space-between;
@@ -392,9 +442,6 @@ body { font-family: var(--sans); }
   text-transform: none;
   color: var(--ink);
 }
-
-/* Postal-espejo offscreen para la captura: existe en el DOM pero el
-   usuario no la ve. html-to-image la lee a su tamaño nativo. */
 .postal-capture {
   position: fixed;
   top: 0;
@@ -422,8 +469,6 @@ body { font-family: var(--sans); }
   gap: 18px;
   max-width: 100%;
 }
-/* El stage ocupa el tamaño efectivo (escalado); el wrap mantiene el
-   tamaño nativo y se escala con transform. JS setea ambos. */
 .postal-stage {
   display: flex;
   align-items: center;
@@ -434,7 +479,6 @@ body { font-family: var(--sans); }
   height: 960px;
   transform-origin: top left;
 }
-
 .postal-actions {
   display: flex;
   gap: 22px;
@@ -475,9 +519,6 @@ body { font-family: var(--sans); }
     padding: 32px 24px 24px;
     gap: 16px;
   }
-
-  /* Topbar pasa a una sola columna centrada: edición, logo, fecha.
-     Estack vertical para no romper en dos líneas cada meta. */
   .topbar {
     grid-template-columns: 1fr;
     gap: 4px;
@@ -494,7 +535,6 @@ body { font-family: var(--sans); }
     font-size: 10px;
     letter-spacing: 3px;
   }
-
   .display {
     font-size: clamp(36px, 11vw, 72px);
     line-height: 0.92;
@@ -502,35 +542,25 @@ body { font-family: var(--sans); }
     margin: 4px 0 14px;
   }
   .subtitle { font-size: 14px; }
-
   .fragment-wrap { padding: 20px 0; }
   .fragment {
     font-size: 17px;
     line-height: 1.65;
     max-width: 100%;
   }
-
-  /* En móvil reducimos el aire entre casilleros vacíos para que la
-     palabra entre completa en una línea aunque sea larga (cristales). */
   .letra-slot { margin: 0 0.03em; min-width: 0.55em; }
-
   .ghost-input { font-size: 18px; }
   .input-hint {
     font-size: 9px;
     letter-spacing: 2px;
   }
-
   .susurro {
     font-size: 8.5pt;
     letter-spacing: 0.5px;
   }
   .susurro strong { letter-spacing: 1.6px; }
-
   .hint-btn { font-size: 13px; }
   .hint-out { font-size: 13px; }
-
-  /* La barra inferior pasa a stack vertical: contadores arriba (más
-     útil al jugar) y cementerio debajo. */
   .bottombar {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -549,21 +579,32 @@ body { font-family: var(--sans); }
     letter-spacing: 1.4px;
     order: 1;
   }
-
-  /* Atribución de la pantalla "Eclipse resuelto" */
   .litlapse-author { font-size: 9px; letter-spacing: 2.2px; }
   .litlapse-work { font-size: 14px; }
-
   .share-btn { font-size: 16px; }
   .share-btn--secondary { font-size: 13px; margin-left: 0; }
   .win-actions { display: flex; flex-direction: column; gap: 14px; align-items: center; }
   .share-out { font-size: 10px; letter-spacing: 1.2px; }
-
-  /* Modal de postal: menos padding para ganar lugar al previewearla. */
   .postal-modal { padding: 16px; }
   .postal-modal-inner { gap: 14px; }
   .postal-action-btn { font-size: 15px; }
   .postal-close { font-size: 13px; }
+  .screen-howto .display { font-size: clamp(36px, 11vw, 56px); }
+  .howto-steps {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    margin: 22px 0 26px;
+  }
+  .howto-step {
+    grid-template-columns: 36px 1fr;
+    gap: 12px;
+    padding-top: 12px;
+  }
+  .howto-num { font-size: 22px; }
+  .howto-body p { font-size: 15px; line-height: 1.55; }
+  .howto-back-link { font-size: 15px; }
+  .counters-block { align-items: center; gap: 6px; }
+  .howto-link { font-size: 12px; }
 }
 
 /* ────────────────────── REDUCED MOTION ────────────────────── */

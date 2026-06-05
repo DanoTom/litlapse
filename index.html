@@ -80,15 +80,78 @@
       <div data-litlapse="attribution" class="attribution"></div>
     </section>
 
+    <!-- ───────── pantalla cómo se juega ───────── -->
+    <section data-litlapse="screen-howto" class="screen screen-howto" hidden>
+      <h1 class="display">Cómo<br /><em>se juega.</em></h1>
+      <p class="subtitle"><em>Un eclipse al día, tres elipsis ocultas y una sola regla: leer despacio.</em></p>
+
+      <ol class="howto-steps">
+        <li class="howto-step">
+          <span class="howto-num">I</span>
+          <div class="howto-body">
+            <h4>El fragmento</h4>
+            <p>Cada día publicamos un texto de la literatura universal. Tres de sus palabras quedan en elipsis: una hilera de guiones bajos del largo exacto de cada palabra. La primera letra de cada una aparece ya escrita, como pista de cortesía.</p>
+          </div>
+        </li>
+
+        <li class="howto-step">
+          <span class="howto-num">II</span>
+          <div class="howto-body">
+            <h4>La elipsis activa</h4>
+            <p>Sólo una palabra está en juego a la vez. La reconocés por el pulso suave de sus casillas vacías. Escribís dentro del input de abajo, nunca sobre el texto.</p>
+          </div>
+        </li>
+
+        <li class="howto-step">
+          <span class="howto-num">III</span>
+          <div class="howto-body">
+            <h4>Tu intento</h4>
+            <p>Escribís una palabra que tenga la misma cantidad de letras que la oculta y pulsás <em>Enter</em>. Si no coincide en longitud, no cuenta como intento — el input se sacude para avisarte.</p>
+          </div>
+        </li>
+
+        <li class="howto-step">
+          <span class="howto-num">IV</span>
+          <div class="howto-body">
+            <h4>Letras que se fijan</h4>
+            <p>Cada letra que coincide en posición exacta se asienta sobre su guion bajo y se queda ahí, intento tras intento. Cuando todas las casillas están llenas, la palabra queda resuelta y el foco salta a la siguiente.</p>
+          </div>
+        </li>
+
+        <li class="howto-step">
+          <span class="howto-num">V</span>
+          <div class="howto-body">
+            <h4>El susurro y el cementerio</h4>
+            <p>Las letras que aparecen en otra posición se acumulan en una línea discreta debajo del input — <em>Contiene: A, E</em>. Las palabras incorrectas caen al cementerio en cursiva tachada; las letras que no existen en la palabra activa se ven al 15% para descartarlas de un vistazo.</p>
+          </div>
+        </li>
+
+        <li class="howto-step">
+          <span class="howto-num">VI</span>
+          <div class="howto-body">
+            <h4>Seis intentos, una postal</h4>
+            <p>Tenés seis intentos por cada palabra. Si los gastás sin completarla, el eclipse se cierra hasta mañana. Si resolvés las tres, recibís una postal con el verso completo y la firma del autor.</p>
+          </div>
+        </li>
+      </ol>
+
+      <p class="howto-back">
+        <a href="#" data-litlapse="howto-back" class="howto-back-link">← volver al fragmento de hoy</a>
+      </p>
+    </section>
+
     <hr class="rule" />
     <footer class="bottombar">
       <ul data-litlapse="graveyard" class="graveyard" aria-label="Cementerio de palabras"></ul>
-      <div class="counters">
-        <span>Intento <strong data-litlapse="attempts">0</strong></span>
-        <span>·</span>
-        <span><strong data-litlapse="found">0/3</strong> hallada</span>
-        <span>·</span>
-        <span><strong data-litlapse="word-attempts">0/6</strong> en esta palabra</span>
+      <div class="counters-block">
+        <div class="counters">
+          <span>Intento <strong data-litlapse="attempts">0</strong></span>
+          <span>·</span>
+          <span><strong data-litlapse="found">0/3</strong> hallada</span>
+          <span>·</span>
+          <span><strong data-litlapse="word-attempts">0/6</strong> en esta palabra</span>
+        </div>
+        <a href="#" data-litlapse="howto-link" class="howto-link">cómo se juega</a>
       </div>
     </footer>
   </main>

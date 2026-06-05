@@ -2,26 +2,8 @@
  * litlapse · engine.js
  * --------------------------------------------------------------
  * Motor de presentación. Render del fragmento como casilleros de
- * letras (slots) y conexión con el estado deductivo.
- *
- * Selectores que espera (todos opcionales: si no están, se ignoran):
- *
- *   [data-litlapse="fragment"]       contenedor del párrafo con elipsis
- *   [data-litlapse="input"]          <input> de texto
- *   [data-litlapse="form"]           <form> que envuelve al input
- *   [data-litlapse="susurro"]        contenedor de letras descolocadas
- *   [data-litlapse="graveyard"]      contenedor del cementerio
- *   [data-litlapse="attempts"]       intento global (suma de todos)
- *   [data-litlapse="found"]          palabras halladas (n/3)
- *   [data-litlapse="word-attempts"]  intentos en la palabra activa (k/6)
- *   [data-litlapse="hint-btn"]       botón de pista (diccionario)
- *   [data-litlapse="hint-out"]       contenedor donde aparece la pista
- *   [data-litlapse="share-btn"]      botón de compartir (victoria)
- *   [data-litlapse="share-out"]      feedback "copiado al portapapeles"
- *   [data-litlapse="screen-play"]    pantalla "jugando"
- *   [data-litlapse="screen-win"]     pantalla "eclipse resuelto"
- *   [data-litlapse="screen-lose"]    pantalla "derrota"
- *   [data-litlapse="attribution"]    bloque autor/obra/año
+ * letras (slots), conexión con el estado deductivo, modal de postal
+ * y pantalla "cómo se juega".
  * --------------------------------------------------------------
  */
 (function (global) {
@@ -40,10 +22,7 @@
       this.els = this._querySelectores();
       this.tokens = Utils.tokenize(puzzle.textoOriginal);
 
-      // Posiciones recién fijadas en el último intento: el render las usa
-      // para gatillar la animación de fade-in sólo en esas letras.
-      this._fijadasFrescas = new Map(); // slotIndex → Set<posición>
-
+      this._fijadasFrescas = new Map();
       this.state.onChange = () => this.render();
 
       this._enlazarEventos();
@@ -75,6 +54,9 @@
         screenPlay: $('[data-litlapse="screen-play"]'),
         screenWin: $('[data-litlapse="screen-win"]'),
         screenLose: $('[data-litlapse="screen-lose"]'),
+        screenHowto: $('[data-litlapse="screen-howto"]'),
+        howtoLink: $('[data-litlapse="howto-link"]'),
+        howtoBack: $('[data-litlapse="howto-back"]'),
         attribution: $('[data-litlapse="attribution"]'),
         postalModal: $('[data-litlapse="postal-modal"]'),
         postalStage: $('[data-litlapse="postal-stage"]'),
@@ -138,19 +120,57 @@
         });
       }
       if (postalModal) {
-        // Click en el backdrop (no en el contenido) cierra el modal.
         postalModal.addEventListener('click', (e) => {
           if (e.target === postalModal) this._cerrarPostal();
         });
       }
+
+      const { howtoLink, howtoBack, screenHowto } = this.els;
+      if (howtoLink) {
+        howtoLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          this._abrirHowto();
+        });
+      }
+      if (howtoBack) {
+        howtoBack.addEventListener('click', (e) => {
+          e.preventDefault();
+          this._cerrarHowto();
+        });
+      }
+
       this.root.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && postalModal && !postalModal.hidden) {
+        if (e.key !== 'Escape') return;
+        if (postalModal && !postalModal.hidden) {
           this._cerrarPostal();
+        } else if (screenHowto && !screenHowto.hidden) {
+          this._cerrarHowto();
         }
       });
       global.addEventListener('resize', () => {
         if (postalModal && !postalModal.hidden) this._escalarPostal();
       });
+    }
+
+    // ──────────────────────────── cómo se juega ──
+
+    _abrirHowto() {
+      const { screenHowto, screenPlay, screenWin, screenLose } = this.els;
+      if (!screenHowto) return;
+      if (screenPlay) screenPlay.hidden = true;
+      if (screenWin) screenWin.hidden = true;
+      if (screenLose) screenLose.hidden = true;
+      screenHowto.hidden = false;
+      global.document.body.classList.add('in-howto');
+      global.scrollTo(0, 0);
+    }
+
+    _cerrarHowto() {
+      const { screenHowto } = this.els;
+      if (!screenHowto) return;
+      screenHowto.hidden = true;
+      global.document.body.classList.remove('in-howto');
+      this.render();
     }
 
     // ──────────────────────────── entrada del usuario ──
@@ -163,7 +183,6 @@
       const resultado = this.state.intentar(valor);
 
       if (resultado.tipo === 'LARGO_INVALIDO') {
-        // No consume intento; sólo vibra para indicar el rechazo.
         this._vibrar(input);
         this._mensajeBreve(resultado.motivo);
         return;
@@ -184,7 +203,6 @@
         return;
       }
 
-      // IGNORADO u otros: limpiar y seguir.
       input.value = '';
     }
 
@@ -286,16 +304,11 @@
       global.document.body.style.overflow = '';
     }
 
-    /**
-     * La postal tiene tamaño nativo 540×960. En pantallas chicas la
-     * escalamos con `transform: scale(k)` y ajustamos el stage para
-     * que ocupe el tamaño efectivo (sin dejar hueco vacío).
-     */
     _escalarPostal() {
       const wrap = this.els.postalWrap;
       const stage = this.els.postalStage;
       if (!wrap || !stage) return;
-      const margenVertical = 200;  // botones + padding del modal
+      const margenVertical = 200;
       const margenLateral = 48;
       const vh = Math.max(400, global.innerHeight - margenVertical);
       const vw = Math.max(280, global.innerWidth - margenLateral);
@@ -361,13 +374,13 @@
       this._renderAtribucion();
       this._renderBotonesEstado();
       this._ajustarInputAlSlot();
-      // Limpiar el set de fijadas frescas DESPUÉS de renderizar; así
-      // el próximo render no vuelve a animar las mismas letras.
       this._fijadasFrescas = new Map();
     }
 
     _renderPantalla() {
-      const { screenPlay, screenWin, screenLose } = this.els;
+      const { screenHowto, screenPlay, screenWin, screenLose } = this.els;
+      // Si el usuario está leyendo "cómo se juega", no tocamos las pantallas.
+      if (screenHowto && !screenHowto.hidden) return;
       const s = this.state.status;
       const toggle = (el, on) => {
         if (!el) return;
@@ -409,7 +422,6 @@
       const frescas = this._fijadasFrescas.get(slotIndex) || new Set();
       const aria = `palabra ${slotIndex + 1} de ${this.state.totalPalabras}`;
 
-      // Derrota con palabra sin completar: revelar tachado en italic.
       if (status === STATUS.DERROTA && !slot.completada) {
         const texto = Utils.escapeHtml(slot.canon.join(''));
         return `<span class="elipsis revelada-fallida" data-slot="${slotIndex}" aria-label="${aria}">${texto}</span>`;
@@ -442,8 +454,6 @@
         host.classList.remove('is-visible');
         return;
       }
-      // Filtrar: si todas las ocurrencias de una letra ya están fijadas
-      // en el fragmento, no la susurramos (ya se ve).
       const vigentes = slot.contiene.filter((ch) =>
         slot.norm.some((c, k) => c === ch && !slot.fijadas[k])
       );
@@ -470,13 +480,8 @@
         host.classList.remove('is-populated');
         return;
       }
-      // Para opacar letras inexistentes usamos la palabra activa como
-      // referencia. Al avanzar de slot, la categorización se recalcula
-      // automáticamente en el próximo render.
       const slotRef = this.state.slotActivo;
-      const setObjetivo = slotRef
-        ? new Set(slotRef.norm)
-        : null;
+      const setObjetivo = slotRef ? new Set(slotRef.norm) : null;
 
       const items = palabras.map((w) => {
         const letras = Array.from(w).map((ch) => {
