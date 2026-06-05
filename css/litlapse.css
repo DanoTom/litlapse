@@ -44,9 +44,10 @@ body { font-family: var(--sans); }
 }
 .meta {
   font-family: var(--sans);
-  font-size: 10px; letter-spacing: 1.5px;
+  font-size: 11px; letter-spacing: 1.5px;
   text-transform: uppercase; color: var(--ink-soft);
 }
+.display em { font-style: italic; font-weight: 400; }
 .rule { border: 0; border-top: 1px solid var(--rule); margin: 0; }
 
 .screen { display: contents; }
@@ -71,8 +72,6 @@ body { font-family: var(--sans); }
   max-width: 620px;
   margin: 0;
 }
-
-/* ────────────────────── ELIPSIS (casilleros letra a letra) ────────────────────── */
 
 .elipsis {
   display: inline-block;
@@ -129,8 +128,6 @@ body { font-family: var(--sans); }
   letter-spacing: 0;
 }
 
-/* ────────────────────── INPUT ────────────────────── */
-
 .input-row {
   display: flex; flex-direction: column;
   align-items: center; gap: 10px;
@@ -151,12 +148,10 @@ body { font-family: var(--sans); }
 }
 .input-hint {
   font-family: var(--sans);
-  font-size: 10px; letter-spacing: 2.5px;
+  font-size: 11px; letter-spacing: 2.5px;
   text-transform: uppercase;
   color: var(--ink-soft);
 }
-
-/* ────────────────────── SUSURRO ────────────────────── */
 
 .susurro {
   font-family: var(--sans);
@@ -176,12 +171,10 @@ body { font-family: var(--sans); }
   margin-left: 4px;
 }
 
-/* ────────────────────── AUXILIO (pista) ────────────────────── */
-
 .aux { text-align: center; margin: 4px 0; }
 .hint-btn {
   font-family: var(--serif); font-style: italic;
-  font-size: 13px; color: var(--ink-soft);
+  font-size: 14px; color: var(--ink-soft);
   background: transparent; border: 0;
   border-bottom: 1px solid var(--ink-faint);
   cursor: pointer; padding: 0 0 2px;
@@ -194,8 +187,6 @@ body { font-family: var(--sans); }
   opacity: 0; transition: opacity .4s ease;
 }
 .hint-out.is-visible { opacity: 1; }
-
-/* ────────────────────── CEMENTERIO ────────────────────── */
 
 .bottombar {
   display: grid;
@@ -228,13 +219,11 @@ body { font-family: var(--sans); }
 
 .counters {
   font-family: var(--sans);
-  font-size: 10px; letter-spacing: 2px;
+  font-size: 11.5px; letter-spacing: 2px;
   text-transform: uppercase; color: var(--ink-soft);
   display: flex; gap: 8px;
 }
 .counters strong { color: var(--ink); font-weight: 600; }
-
-/* ────────────────────── ATRIBUCIÓN (victoria/derrota) ────────────────────── */
 
 .attribution {
   text-align: center; margin: 24px 0 8px;
@@ -242,7 +231,7 @@ body { font-family: var(--sans); }
 }
 .litlapse-author {
   font-family: var(--sans);
-  font-size: 10px; letter-spacing: 3px;
+  font-size: 11px; letter-spacing: 3px;
   text-transform: uppercase; color: var(--ink);
 }
 .litlapse-work {
@@ -275,13 +264,10 @@ body { font-family: var(--sans); }
 }
 .share-out.is-visible { opacity: 1; }
 
-/* ────────────────────── CÓMO SE JUEGA ────────────────────── */
-
 .screen-howto .display {
   font-size: clamp(40px, 7vw, 96px);
   line-height: 0.92;
 }
-
 .howto-steps {
   list-style: none;
   margin: 28px 0 32px;
@@ -347,15 +333,13 @@ body { font-family: var(--sans); }
 .howto-link {
   font-family: var(--serif);
   font-style: italic;
-  font-size: 13px;
-  color: var(--ink-soft);
+  font-size: 15px;
+  color: var(--ink);
   text-decoration: none;
-  border-bottom: 1px solid var(--ink-faint);
-  padding-bottom: 1px;
+  border-bottom: 1px solid var(--ink);
+  padding: 4px 2px;
 }
 body.in-howto .bottombar { display: none; }
-
-/* ────────────────────── POSTAL (540×960) ────────────────────── */
 
 .postal {
   width: 540px;
@@ -449,8 +433,6 @@ body.in-howto .bottombar { display: none; }
   pointer-events: none;
 }
 
-/* ────────────────────── MODAL DE POSTAL ────────────────────── */
-
 .postal-modal {
   position: fixed;
   inset: 0;
@@ -512,8 +494,6 @@ body.in-howto .bottombar { display: none; }
   min-height: 1em;
 }
 
-/* ────────────────────── MÓVIL (≤ 720px) ────────────────────── */
-
 @media (max-width: 720px) {
   .stage {
     padding: 32px 24px 24px;
@@ -528,7 +508,7 @@ body.in-howto .bottombar { display: none; }
   .topbar .meta,
   .topbar .meta:last-child {
     text-align: center;
-    font-size: 9px;
+    font-size: 10.5px;
     letter-spacing: 1.2px;
   }
   .logo {
@@ -551,7 +531,7 @@ body.in-howto .bottombar { display: none; }
   .letra-slot { margin: 0 0.03em; min-width: 0.55em; }
   .ghost-input { font-size: 18px; }
   .input-hint {
-    font-size: 9px;
+    font-size: 10.5px;
     letter-spacing: 2px;
   }
   .susurro {
@@ -559,7 +539,7 @@ body.in-howto .bottombar { display: none; }
     letter-spacing: 0.5px;
   }
   .susurro strong { letter-spacing: 1.6px; }
-  .hint-btn { font-size: 13px; }
+  .hint-btn { font-size: 14px; }
   .hint-out { font-size: 13px; }
   .bottombar {
     grid-template-columns: 1fr;
@@ -575,11 +555,11 @@ body.in-howto .bottombar { display: none; }
     justify-content: center;
     flex-wrap: wrap;
     row-gap: 4px;
-    font-size: 9px;
+    font-size: 10.5px;
     letter-spacing: 1.4px;
     order: 1;
   }
-  .litlapse-author { font-size: 9px; letter-spacing: 2.2px; }
+  .litlapse-author { font-size: 10.5px; letter-spacing: 2.2px; }
   .litlapse-work { font-size: 14px; }
   .share-btn { font-size: 16px; }
   .share-btn--secondary { font-size: 13px; margin-left: 0; }
@@ -603,11 +583,9 @@ body.in-howto .bottombar { display: none; }
   .howto-num { font-size: 22px; }
   .howto-body p { font-size: 15px; line-height: 1.55; }
   .howto-back-link { font-size: 15px; }
-  .counters-block { align-items: center; gap: 6px; }
-  .howto-link { font-size: 12px; }
+  .counters-block { align-items: center; gap: 10px; }
+  .howto-link { font-size: 14px; padding: 5px 2px; }
 }
-
-/* ────────────────────── REDUCED MOTION ────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
   .letra-slot.fijada.nueva,
