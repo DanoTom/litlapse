@@ -28,7 +28,7 @@
   <meta name="twitter:description" content="Un juego diario de literatura en castellano." />
   <meta name="twitter:image" content="https://danotom.github.io/litlapse/og.png" />
 
-  <!-- Favicon (SVG inline en un único archivo, sin necesidad de PNG ni assets binarios) -->
+  <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="apple-touch-icon" href="favicon.svg" />
 
@@ -75,6 +75,10 @@
         />
         <span class="input-hint">tu palabra · ↵</span>
       </form>
+
+      <p data-litlapse="tip-input" class="tip" hidden>
+        Empezá escribiendo una palabra del largo de la elipsis y pulsá <em>Enter</em>.
+      </p>
 
       <p data-litlapse="susurro" class="susurro" role="status" aria-live="polite"></p>
 
@@ -187,6 +191,7 @@
           <span><strong data-litlapse="word-attempts">0/6</strong> en esta palabra</span>
         </div>
         <a href="#" data-litlapse="howto-link" class="howto-link">cómo se juega</a>
+        <span data-litlapse="streak" class="streak" hidden></span>
       </div>
     </footer>
   </main>
@@ -213,9 +218,6 @@
       <p data-litlapse="postal-out" class="postal-out" role="status" aria-live="polite"></p>
     </div>
   </div>
-
-  <!-- Postal espejo, fuera de pantalla, sólo para captura a PNG a su tamaño nativo. -->
-  <div data-litlapse="postal-capture" class="postal postal-capture" aria-hidden="true"></div>
 
   <!-- orden estricto de dependencias -->
   <script src="js/puzzles.js"></script>

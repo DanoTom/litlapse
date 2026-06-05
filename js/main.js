@@ -3,14 +3,12 @@
  * --------------------------------------------------------------
  * Bootstrap. Selecciona el eclipse del día, instancia el estado
  * (con rehidratación desde localStorage) y monta el motor sobre
- * el DOM. La primera visita abre automáticamente "Cómo se juega"
- * para que el jugador entienda la mecánica antes del primer intento.
+ * el DOM. El onboarding ya no abre el manual completo — el motor
+ * muestra un tip discreto sobre el input la primera vez.
  * --------------------------------------------------------------
  */
 (function (global) {
   'use strict';
-
-  const FLAG_VISITADO = 'litlapse:visited';
 
   function arrancar() {
     const { Puzzles, State, Engine } = global.Litlapse;
@@ -24,17 +22,8 @@
       root: global.document,
       modoPista: 'diccionario'
     });
+    // Expuesto sólo para inspección manual en consola; no es API pública.
     global.Litlapse.__debug = { puzzle, state, engine };
-
-    // Onboarding silencioso: la primera vez que entra alguien (en este
-    // navegador), abrimos el manual. Si el localStorage está deshabilitado
-    // o el flag ya fue seteado, no pasa nada.
-    try {
-      if (!global.localStorage.getItem(FLAG_VISITADO)) {
-        engine._abrirHowto();
-        global.localStorage.setItem(FLAG_VISITADO, '1');
-      }
-    } catch (_e) { /* silent */ }
   }
 
   if (global.document.readyState === 'loading') {
