@@ -275,6 +275,22 @@
       return { modo: 'diccionario', contenido: pal.pistaDiccionario || '' };
     }
 
+    /**
+     * Cambia la palabra activa a la posición elegida por el jugador.
+     * Devuelve `true` si efectivamente cambió. Rechaza con `false` si
+     * la partida ya terminó, el índice es inválido, la palabra ya está
+     * completada, o ya era la activa.
+     */
+    seleccionarSlot(idx) {
+      if (this.terminada) return false;
+      if (typeof idx !== 'number' || idx < 0 || idx >= this.slots.length) return false;
+      if (this.slots[idx].completada) return false;
+      if (this.activeIndex === idx) return false;
+      this.activeIndex = idx;
+      this._persistirYNotificar();
+      return true;
+    }
+
     reiniciar() {
       this._iniciarLimpio();
       this._persistirYNotificar();
