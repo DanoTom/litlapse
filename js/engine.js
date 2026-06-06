@@ -69,6 +69,7 @@
         attempts: $('[data-litlapse="attempts"]'),
         found: $('[data-litlapse="found"]'),
         wordAttempts: $('[data-litlapse="word-attempts"]'),
+        wordTabs: $('[data-litlapse="word-tabs"]'),
         hintBtn: $('[data-litlapse="hint-btn"]'),
         hintOut: $('[data-litlapse="hint-out"]'),
         shareBtn: $('[data-litlapse="share-btn"]'),
@@ -176,20 +177,53 @@
       });
 
       // Click sobre cualquier elipsis del fragmento la activa, si el
-      // estado lo permite. Permite saltar el orden lineal de palabras
-      // (atacar primero la más fácil, p. ej.).
+      // estado lo permite. Permite saltar el orden lineal de palabras.
+      // Con fallback: si el tap cae en el espacio entre palabras (target
+      // pequeño en mobile), buscamos la elipsis más cercana de la misma
+      // línea por distancia horizontal, hasta ~80px de tolerancia.
       this.els.fragmentsTodos.forEach((host) => {
         host.addEventListener('click', (e) => {
-          const target = e.target.closest('.elipsis[data-slot]');
+          let target = e.target.closest('.elipsis[data-slot]');
+          if (!target) target = this._elipsisMasCercana(host, e.clientX, e.clientY);
           if (!target) return;
           const idx = Number(target.dataset.slot);
           if (Number.isNaN(idx)) return;
           if (this.state.seleccionarSlot(idx)) {
-            // El render ya corrió por onChange; sólo refocamos el input.
             this._enfocarInput();
           }
         });
       });
+
+      // Tabs "palabra I · II · III": botones nativos, target grande,
+      // funcionan con o sin teclado virtual abierto.
+      if (this.els.wordTabs) {
+        this.els.wordTabs.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-tab]');
+          if (!btn) return;
+          e.preventDefault();
+          const idx = Number(btn.dataset.tab);
+          if (Number.isNaN(idx)) return;
+          if (this.state.seleccionarSlot(idx)) {
+            this._enfocarInput();
+          }
+        });
+      }
+    }
+
+    _elipsisMasCercana(host, x, y) {
+      const candidatos = host.querySelectorAll('.elipsis[data-slot]');
+      let best = null;
+      let bestDist = Infinity;
+      for (const c of candidatos) {
+        const r = c.getBoundingClientRect();
+        // Sólo consideramos elipses cuya línea contiene el tap (con
+        // tolerancia de 8px arriba/abajo).
+        if (y < r.top - 8 || y > r.bottom + 8) continue;
+        const cx = (r.left + r.right) / 2;
+        const dist = Math.abs(cx - x);
+        if (dist < bestDist) { bestDist = dist; best = c; }
+      }
+      return bestDist < 80 ? best : null;
     }
 
     _abrirHowto() {
@@ -289,9 +323,9 @@
       const largo = this.state.largoEsperado;
       if (largo > 0) {
         input.maxLength = largo;
-        // Ancho generoso: nunca menos de 10ch para que el input no se
-        // sienta apretado. Para palabras más largas, sumamos 1ch de aire.
-        input.style.width = `${Math.max(10, largo + 1)}ch`;
+        // Ancho generoso: nunca menos de 18ch (línea editorial larga),
+        // + 2ch de aire para palabras especialmente largas.
+        input.style.width = `${Math.max(18, largo + 2)}ch`;
         input.setAttribute('aria-label',
           `Escribe la palabra de ${largo} letras y pulsa Enter`);
       }
@@ -521,11 +555,38 @@
       this._renderSusurro();
       this._renderCementerio();
       this._renderContadores();
+      this._renderWordTabs();
       this._renderAtribucion();
       this._renderBotonesEstado();
       this._actualizarStreak();
       this._ajustarInputAlSlot();
       this._fijadasFrescas = new Map();
+    }
+
+    _renderWordTabs() {
+      const host = this.els.wordTabs;
+      if (!host) return;
+      if (this.state.terminada) {
+        host.hidden = true;
+        host.innerHTML = '';
+        return;
+      }
+      host.hidden = false;
+      const romanos = ['I', 'II', 'III', 'IV', 'V', 'VI'];
+      const piezas = this.state.slots.map((s, i) => {
+        const cls = ['word-tab'];
+        if (s.completada) cls.push('is-done');
+        else if (i === this.state.activeIndex) cls.push('is-active');
+        const aria = s.completada
+          ? `palabra ${romanos[i] || (i + 1)} resuelta`
+          : (i === this.state.activeIndex
+              ? `palabra ${romanos[i] || (i + 1)} activa`
+              : `cambiar a palabra ${romanos[i] || (i + 1)}`);
+        const disabled = s.completada ? ' disabled aria-disabled="true"' : '';
+        return `<button type="button" class="${cls.join(' ')}" data-tab="${i}" aria-label="${aria}"${disabled}>${romanos[i] || (i + 1)}</button>`;
+      });
+      const labelPalabra = `<span class="word-tabs-label">palabra</span>`;
+      host.innerHTML = labelPalabra + piezas.join('<span class="word-tab-sep" aria-hidden="true">·</span>');
     }
 
     _renderPantalla() {
