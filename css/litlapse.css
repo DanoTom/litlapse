@@ -422,6 +422,60 @@ body { font-family: var(--sans); }
   align-items: flex-end;
   gap: 8px;
 }
+/* Tabs "palabra I · II · III": selector explícito de palabra activa.
+   Editorial: cifras romanas, italics, subrayado del activo. Funcionan
+   como atajo de descubribilidad para la mecánica de cambiar palabra. */
+.word-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--serif);
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1;
+}
+.word-tabs[hidden] { display: none; }
+.word-tabs-label {
+  font-family: var(--sans);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-right: 8px;
+}
+.word-tab {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-bottom: 1px solid transparent;
+  letter-spacing: 0.5px;
+  transition: color 200ms ease, border-color 200ms ease;
+  min-width: 28px;
+  text-align: center;
+}
+.word-tab:hover { color: var(--ink); }
+.word-tab.is-active {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+.word-tab.is-done {
+  color: var(--ink-faint);
+  text-decoration: line-through;
+  text-decoration-thickness: 0.5px;
+  cursor: default;
+}
+.word-tab.is-done:hover { color: var(--ink-faint); }
+.word-tab:disabled { cursor: default; }
+.word-tab-sep {
+  color: var(--ink-faint);
+  margin: 0 1px;
+  user-select: none;
+}
 .howto-link {
   font-family: var(--serif);
   font-style: italic;
@@ -717,6 +771,9 @@ body.in-howto .bottombar { display: none; }
   .counters-block { align-items: center; gap: 10px; }
   .howto-link { font-size: 14px; padding: 5px 2px; }
   .streak { font-size: 11px; }
+  .word-tabs { font-size: 13px; }
+  .word-tab { font-size: 15px; padding: 8px 10px; min-width: 32px; }
+  .word-tabs-label { font-size: 9.5px; margin-right: 6px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
