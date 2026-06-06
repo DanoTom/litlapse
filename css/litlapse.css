@@ -108,14 +108,27 @@ body { font-family: var(--sans); }
   vertical-align: baseline;
   font-family: var(--serif);
   white-space: nowrap;
+  cursor: pointer;
+}
+/* Cursor default en elipsis que no son seleccionables (activa actual,
+   completada, revelada por derrota, en pantalla de victoria). */
+.elipsis.active,
+.elipsis.completada,
+.elipsis.revelada-fallida,
+.elipsis.en-victoria {
+  cursor: default;
 }
 .letra-slot {
   display: inline-block;
-  min-width: 0.62em;
+  min-width: 0.55em;
   text-align: center;
   font-weight: 400;
-  margin: 0 0.06em;
+  margin: 0 0.04em;
 }
+/* Primer y último slot sin margen externo: así la elipsis no "infla"
+   el espacio respecto al texto del fragmento que la rodea. */
+.elipsis > .letra-slot:first-child { margin-left: 0; }
+.elipsis > .letra-slot:last-child  { margin-right: 0; }
 .letra-slot.vacia {
   font-weight: 700;
   color: var(--ink);
@@ -215,9 +228,6 @@ body { font-family: var(--sans); }
 
 /* ────────────────────── TIP DE ONBOARDING ────────────────────── */
 
-/* Una sola frase tipográfica sobre el input la primera vez. Se cierra
-   sola al primer intento del usuario. Reemplaza el manual auto-open
-   que era demasiado pesado. */
 .tip {
   font-family: var(--serif);
   font-style: italic;
@@ -320,8 +330,6 @@ body { font-family: var(--sans); }
   border-bottom-color: var(--ink-faint);
   margin-left: 22px;
 }
-/* Botón con ícono inline: el SVG va a la izquierda del texto y hereda
-   el color del botón con currentColor. */
 .share-btn--with-icon {
   display: inline-flex;
   align-items: center;
@@ -423,8 +431,6 @@ body { font-family: var(--sans); }
   border-bottom: 1px solid var(--ink);
   padding: 4px 2px;
 }
-/* Pequeña marca de eclipses resueltos, debajo del link "cómo se juega".
-   Sólo visible cuando el jugador ya completó al menos uno. */
 .streak {
   font-family: var(--serif);
   font-style: italic;
@@ -448,6 +454,20 @@ body.in-howto .bottombar { display: none; }
   position: relative;
   box-sizing: border-box;
   overflow: hidden;
+}
+/* Cuando el preview pasa a renderizar el PNG generado (<img>), quitamos
+   padding/grid para que la imagen ocupe el contenedor completo y se
+   pueda hacer tocar-y-mantener para guardar en la galería del teléfono. */
+.postal.has-img {
+  padding: 0;
+  display: block;
+  background: transparent;
+}
+.postal.has-img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .postal-mark {
   display: flex;
@@ -549,10 +569,6 @@ body.in-howto .bottombar { display: none; }
   from { transform: scale(0.96); opacity: 0; }
   to   { transform: scale(1); opacity: 1; }
 }
-/* El stage ocupa el tamaño efectivo (escalado por JS).
-   El wrap mantiene el tamaño nativo 540×960 pero se posiciona en
-   absoluto sobre el stage con transform-origin: top-left, así la
-   imagen escalada llena el stage de borde a borde sin off-center. */
 .postal-stage {
   position: relative;
   flex-shrink: 0;
@@ -642,7 +658,7 @@ body.in-howto .bottombar { display: none; }
     line-height: 1.65;
     max-width: 100%;
   }
-  .letra-slot { margin: 0 0.03em; min-width: 0.55em; }
+  .letra-slot { margin: 0 0.025em; min-width: 0.5em; }
   .ghost-input { font-size: 18px; }
   .input-hint {
     font-size: 10.5px;

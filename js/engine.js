@@ -46,6 +46,7 @@
       this.tokens = Utils.tokenize(puzzle.textoOriginal);
 
       this._fijadasFrescas = new Map();
+      this._postalDataUrl = null;
       this.state.onChange = () => this.render();
 
       this._enlazarEventos();
@@ -173,6 +174,22 @@
       global.addEventListener('resize', () => {
         if (postalModal && !postalModal.hidden) this._escalarPostal();
       });
+
+      // Click sobre cualquier elipsis del fragmento la activa, si el
+      // estado lo permite. Permite saltar el orden lineal de palabras
+      // (atacar primero la más fácil, p. ej.).
+      this.els.fragmentsTodos.forEach((host) => {
+        host.addEventListener('click', (e) => {
+          const target = e.target.closest('.elipsis[data-slot]');
+          if (!target) return;
+          const idx = Number(target.dataset.slot);
+          if (Number.isNaN(idx)) return;
+          if (this.state.seleccionarSlot(idx)) {
+            // El render ya corrió por onChange; sólo refocamos el input.
+            this._enfocarInput();
+          }
+        });
+      });
     }
 
     _abrirHowto() {
@@ -272,7 +289,9 @@
       const largo = this.state.largoEsperado;
       if (largo > 0) {
         input.maxLength = largo;
-        input.style.width = `${Math.max(largo, 4)}ch`;
+        // Ancho generoso: nunca menos de 10ch para que el input no se
+        // sienta apretado. Para palabras más largas, sumamos 1ch de aire.
+        input.style.width = `${Math.max(10, largo + 1)}ch`;
         input.setAttribute('aria-label',
           `Escribe la palabra de ${largo} letras y pulsa Enter`);
       }
@@ -307,15 +326,26 @@
     _abrirPostal() {
       if (this.state.status !== STATUS.VICTORIA) return;
       const html = this._postalHtml();
-      if (this.els.postalPreview) this.els.postalPreview.innerHTML = html;
+      const preview = this.els.postalPreview;
+      if (preview) {
+        // Reset a modo HTML por si quedó en `has-img` de una apertura previa.
+        preview.classList.remove('has-img');
+        preview.innerHTML = html;
+      }
       const modal = this.els.postalModal;
       if (!modal) return;
       modal.hidden = false;
       this._escalarPostal();
       global.document.body.style.overflow = 'hidden';
-      if (this.els.postalOut) {
-        this.els.postalOut.textContent = '';
-      }
+      if (this.els.postalOut) this.els.postalOut.textContent = '';
+
+      // Generamos el PNG en segundo plano. Cuando esté listo:
+      //  - Reemplazamos el preview HTML por una <img> real → el usuario
+      //    puede tocar-y-mantener para "Guardar imagen" en su galería.
+      //  - Cacheamos el dataUrl para que el botón "guardar o compartir"
+      //    sea instantáneo y no tenga que regenerar el PNG.
+      this._postalDataUrl = null;
+      this._generarPostalPng();
     }
 
     _cerrarPostal() {
@@ -339,6 +369,50 @@
       stage.style.height = `${960 * escala}px`;
     }
 
+    /**
+     * Pre-genera el PNG de la postal al abrir el modal. Cuando termina,
+     * swap el preview HTML por una <img>. Esto resuelve dos problemas:
+     *  (a) En mobile, tocar y mantener una <img> ofrece "Guardar imagen"
+     *      → la imagen va a la galería, en vez de quedar como archivo
+     *      en Descargas (el comportamiento del Web Share fallback).
+     *  (b) El botón "guardar o compartir" ya no tiene que regenerar el
+     *      PNG, así el share es instantáneo.
+     */
+    async _generarPostalPng() {
+      if (!global.htmlToImage) return;
+      const wrapper = global.document.createElement('div');
+      wrapper.setAttribute('aria-hidden', 'true');
+      wrapper.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;left:0;top:0;';
+      const postal = global.document.createElement('div');
+      postal.className = 'postal';
+      postal.innerHTML = this._postalHtml();
+      wrapper.appendChild(postal);
+      global.document.body.appendChild(wrapper);
+
+      try {
+        await new Promise((r) => global.requestAnimationFrame(r));
+        const dataUrl = await global.htmlToImage.toPng(postal, {
+          pixelRatio: 2,
+          cacheBust: true,
+          backgroundColor: '#f6f3eb'
+        });
+        this._postalDataUrl = dataUrl;
+        // Si el modal sigue abierto, sustituimos el preview por <img>.
+        const preview = this.els.postalPreview;
+        const modal = this.els.postalModal;
+        if (preview && modal && !modal.hidden) {
+          preview.classList.add('has-img');
+          preview.innerHTML =
+            `<img src="${dataUrl}" alt="Postal del eclipse de hoy" draggable="false" />`;
+        }
+      } catch (_e) {
+        // Silent: el preview HTML queda visible y el botón share regenera
+        // sobre la marcha si el usuario lo intenta.
+      } finally {
+        wrapper.remove();
+      }
+    }
+
     async _compartirImagen() {
       const out = this.els.postalOut;
       const setOut = (txt) => { if (out) out.textContent = txt; };
@@ -346,16 +420,45 @@
         setOut('No se pudo cargar el motor de imagen.');
         return;
       }
-      setOut('Generando imagen…');
 
-      // Renderizamos la postal en un container temporal a tamaño nativo.
-      // El wrapper tiene tamaño 0 con overflow:hidden — no se ve y no
-      // afecta el layout, pero html-to-image captura el nodo `postal`
-      // con sus 540×960 nativos completamente renderizados.
-      //
-      // Este patrón es más robusto que mantener un elemento offscreen
-      // con position:fixed left:-10000px, que algunas versiones de
-      // html-to-image clonan con esa posición y rendean fuera del SVG.
+      // Si el PNG ya está cacheado, compartimos directo sin regenerar.
+      if (this._postalDataUrl) {
+        setOut('Compartiendo…');
+        try {
+          const blob = await (await fetch(this._postalDataUrl)).blob();
+          const file = new File([blob], `litlapse-${this.puzzle.id}.png`, { type: 'image/png' });
+          const nav = global.navigator;
+          if (nav && typeof nav.share === 'function') {
+            const puedeShare = typeof nav.canShare !== 'function'
+              || nav.canShare({ files: [file] });
+            if (puedeShare) {
+              try {
+                await nav.share({
+                  files: [file],
+                  title: `Litlapse — Día #${this.puzzle.id}`
+                });
+                setOut('');
+                return;
+              } catch (_e) { /* fallback abajo */ }
+            }
+          }
+          // Fallback: descarga directa.
+          const a = global.document.createElement('a');
+          a.href = this._postalDataUrl;
+          a.download = `litlapse-${this.puzzle.id}.png`;
+          global.document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setOut('Imagen descargada.');
+          return;
+        } catch (_e) {
+          setOut('No se pudo compartir. Tocá y mantené la imagen para guardarla.');
+          return;
+        }
+      }
+
+      // Sin caché (caso muy raro): generamos sobre la marcha.
+      setOut('Generando imagen…');
       const wrapper = global.document.createElement('div');
       wrapper.setAttribute('aria-hidden', 'true');
       wrapper.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;left:0;top:0;';
@@ -510,7 +613,6 @@
         return;
       }
       // Cada letra va en su propio <span> con `--i` para el stagger CSS.
-      // El ", " queda como texto plano entre los spans — no anima.
       const letras = vigentes
         .slice()
         .sort()
@@ -577,17 +679,11 @@
       const enVictoria = this.state.status === STATUS.VICTORIA;
       if (shareBtn) shareBtn.hidden = !enVictoria;
       if (imageBtn) imageBtn.hidden = !enVictoria;
-      // Si la partida ya terminó, escondemos el tip (sin marcarlo seen).
       if (this.state.terminada) this._ocultarTipInicial({ silencioso: true });
     }
 
     // ──────────────────────────── onboarding inline ──
 
-    /**
-     * Muestra el tip sobre el input la primera vez que el jugador entra
-     * (en este navegador). Si ya jugó o la partida ya está terminada al
-     * cargar, no tiene sentido — no aparece.
-     */
     _mostrarTipInicial() {
       const tip = this.els.tipInput;
       if (!tip) return;
@@ -610,12 +706,6 @@
 
     // ──────────────────────────── eclipses resueltos ──
 
-    /**
-     * Si el puzzle de hoy está en VICTORIA, lo registramos en el listado
-     * persistente; después actualizamos el texto "N eclipses resueltos"
-     * de la barra inferior. Idempotente: registrar dos veces el mismo
-     * puzzle no cuenta doble.
-     */
     _actualizarStreak() {
       const el = this.els.streak;
       if (!el) return;
