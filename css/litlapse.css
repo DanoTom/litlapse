@@ -1,7 +1,10 @@
 /* litlapse · stylesheet.
    Papel envejecido + tinta carbón. Tipografía premium editorial.
    La mecánica deductiva pinta cada palabra oculta como una hilera
-   de casilleros (letra a letra). */
+   de casilleros (letra a letra).
+
+   Pisos tipográficos: 12px para todo lo que se lee, 11px sólo para
+   ornamentos (sellos, números de postal). Jerarquía sin ilegibilidad. */
 
 :root {
   --paper:     #fbf9f5;
@@ -29,7 +32,7 @@ body { font-family: var(--sans); }
 .stage {
   max-width: 880px;
   margin: 0 auto;
-  padding: 56px 64px;
+  padding: 56px 64px 40px;
   min-height: 100vh;
   display: grid;
   grid-template-rows: auto auto 1fr auto auto;
@@ -46,12 +49,12 @@ body { font-family: var(--sans); }
 
 .logo {
   font-family: var(--sans);
-  font-size: 11px; letter-spacing: 4px;
+  font-size: 12px; letter-spacing: 4px;
   font-weight: 500; text-transform: uppercase;
 }
 .meta {
   font-family: var(--sans);
-  font-size: 11px; letter-spacing: 1.5px;
+  font-size: 12px; letter-spacing: 1.5px;
   text-transform: uppercase; color: var(--ink-soft);
 }
 .display em { font-style: italic; font-weight: 400; }
@@ -171,6 +174,8 @@ body { font-family: var(--sans); }
   letter-spacing: 0;
 }
 
+/* ────────────────────── INPUT + PISTA ────────────────────── */
+
 .input-row {
   display: flex; flex-direction: column;
   align-items: center; gap: 10px;
@@ -189,16 +194,54 @@ body { font-family: var(--sans); }
   caret-color: var(--ink);
   letter-spacing: 0.04em;
 }
+/* Fila de meta bajo el input: hint de uso + botón de pista, juntos.
+   La pista vive donde está el ojo del jugador, no enterrada al pie. */
+.input-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+}
 .input-hint {
   font-family: var(--sans);
-  font-size: 11px; letter-spacing: 2.5px;
+  font-size: 12px; letter-spacing: 2.5px;
   text-transform: uppercase;
   color: var(--ink-soft);
 }
+.hint-btn {
+  font-family: var(--serif); font-style: italic;
+  font-size: 15px; color: var(--ink-soft);
+  background: transparent; border: 0;
+  border-bottom: 1px solid var(--ink-faint);
+  cursor: pointer; padding: 0 0 2px;
+  transition: color 200ms ease, border-color 200ms ease;
+}
+.hint-btn:hover { color: var(--ink); border-bottom-color: var(--ink); }
+.hint-btn:disabled { opacity: 0.3; cursor: default; }
+/* Auto-oferta: tras 3 intentos fallidos en la palabra activa, la pista
+   se insinúa con tres pulsos suaves. Justo cuando se la necesita. */
+.hint-btn.se-ofrece {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+  animation: pistaOfrece 1.8s ease-in-out 3;
+}
+@keyframes pistaOfrece {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+.hint-out {
+  font-family: var(--serif); font-style: italic;
+  font-size: 15px; color: var(--ink-soft);
+  text-align: center;
+  margin: 10px auto 0; max-width: 480px;
+  opacity: 0; transition: opacity .4s ease;
+}
+.hint-out.is-visible { opacity: 1; }
+
+/* ────────────────────── SUSURRO ────────────────────── */
 
 .susurro {
   font-family: var(--sans);
-  font-size: 9pt;
+  font-size: 12.5px;
   color: var(--ink-gone);
   text-align: center;
   margin: 6px 0 0;
@@ -231,11 +274,11 @@ body { font-family: var(--sans); }
 .tip {
   font-family: var(--serif);
   font-style: italic;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink-soft);
   text-align: center;
   margin: 4px auto 0;
-  max-width: 380px;
+  max-width: 400px;
   padding: 0 22px;
   animation: tipAparece 0.6s ease 0.4s both;
 }
@@ -246,22 +289,7 @@ body { font-family: var(--sans); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.aux { text-align: center; margin: 4px 0; }
-.hint-btn {
-  font-family: var(--serif); font-style: italic;
-  font-size: 14px; color: var(--ink-soft);
-  background: transparent; border: 0;
-  border-bottom: 1px solid var(--ink-faint);
-  cursor: pointer; padding: 0 0 2px;
-}
-.hint-btn:disabled { opacity: 0.3; cursor: default; }
-.hint-out {
-  font-family: var(--serif); font-style: italic;
-  font-size: 14px; color: var(--ink-soft);
-  margin: 12px auto 0; max-width: 480px;
-  opacity: 0; transition: opacity .4s ease;
-}
-.hint-out.is-visible { opacity: 1; }
+/* ────────────────────── CEMENTERIO + CONTADORES ────────────────────── */
 
 .bottombar {
   display: grid;
@@ -271,7 +299,7 @@ body { font-family: var(--sans); }
 .graveyard {
   list-style: none; padding: 0; margin: 0;
   font-family: var(--serif); font-style: italic;
-  font-size: 11px; color: var(--ink);
+  font-size: 12.5px; color: var(--ink);
 }
 .grave-palabra {
   text-decoration: line-through;
@@ -294,7 +322,7 @@ body { font-family: var(--sans); }
 
 .counters {
   font-family: var(--sans);
-  font-size: 11.5px; letter-spacing: 2px;
+  font-size: 12px; letter-spacing: 2px;
   text-transform: uppercase; color: var(--ink-soft);
   display: flex; gap: 8px;
 }
@@ -306,7 +334,7 @@ body { font-family: var(--sans); }
 }
 .litlapse-author {
   font-family: var(--sans);
-  font-size: 11px; letter-spacing: 3px;
+  font-size: 12px; letter-spacing: 3px;
   text-transform: uppercase; color: var(--ink);
 }
 .litlapse-work {
@@ -348,7 +376,7 @@ body { font-family: var(--sans); }
   transform: translateY(-1px);
 }
 .share-out {
-  font-family: var(--sans); font-size: 11px;
+  font-family: var(--sans); font-size: 12px;
   letter-spacing: 1.5px; text-transform: uppercase;
   color: var(--ink-soft); margin-top: 16px;
   opacity: 0; transition: opacity .4s ease;
@@ -356,39 +384,80 @@ body { font-family: var(--sans); }
 }
 .share-out.is-visible { opacity: 1; }
 
-.screen-howto .display {
-  font-size: clamp(40px, 7vw, 96px);
-  line-height: 0.92;
+/* ────────────────────── MODAL "CÓMO SE JUEGA" ────────────────────── */
+
+.howto-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(36, 34, 32, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 900;
+  animation: modalFondoSuave 240ms ease both;
+}
+.howto-modal[hidden] { display: none; }
+@keyframes modalFondoSuave {
+  from { background-color: rgba(36, 34, 32, 0); }
+  to   { background-color: rgba(36, 34, 32, 0.45); }
+}
+.howto-panel {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  box-shadow: 0 24px 60px rgba(36, 34, 32, 0.25);
+  max-width: 580px;
+  width: 100%;
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: 40px 44px 32px;
+  animation: modalInnerAparece 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.howto-title {
+  font-family: var(--serif);
+  font-size: clamp(32px, 5vw, 44px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+  margin: 0 0 8px;
+}
+.howto-title em { font-style: italic; font-weight: 400; }
+.howto-sub {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--ink-soft);
+  margin: 0 0 24px;
 }
 .howto-steps {
   list-style: none;
-  margin: 28px 0 32px;
+  margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 36px 56px;
+  grid-template-columns: 1fr;
+  gap: 18px;
 }
 .howto-step {
   display: grid;
-  grid-template-columns: 48px 1fr;
-  gap: 16px;
+  grid-template-columns: 36px 1fr;
+  gap: 14px;
   padding-top: 14px;
   border-top: 1px solid var(--rule);
 }
 .howto-num {
   font-family: var(--serif);
   font-style: italic;
-  font-size: 28px;
+  font-size: 24px;
   color: var(--ink);
   line-height: 1;
 }
 .howto-body h4 {
   font-family: var(--sans);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 2.2px;
   text-transform: uppercase;
   font-weight: 600;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   color: var(--ink);
 }
 .howto-body p {
@@ -402,19 +471,23 @@ body { font-family: var(--sans); }
   font-style: italic;
   color: var(--ink-soft);
 }
-.howto-back {
+.howto-foot {
   text-align: center;
-  margin: 8px 0 0;
+  margin: 26px 0 0;
 }
-.howto-back-link {
+.howto-close {
   font-family: var(--serif);
   font-style: italic;
   font-size: 16px;
   color: var(--ink);
-  text-decoration: none;
+  background: transparent;
+  border: 0;
   border-bottom: 1px solid var(--ink);
-  padding-bottom: 1px;
+  cursor: pointer;
+  padding: 0 0 2px;
 }
+
+/* ────────────────────── BLOQUE DE CONTADORES + TABS ────────────────────── */
 
 .counters-block {
   display: flex;
@@ -437,7 +510,7 @@ body { font-family: var(--sans); }
 .word-tabs[hidden] { display: none; }
 .word-tabs-label {
   font-family: var(--sans);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -476,24 +549,56 @@ body { font-family: var(--sans); }
   margin: 0 1px;
   user-select: none;
 }
-.howto-link {
+
+/* ────────────────────── COLOFÓN ────────────────────── */
+
+/* Cierre de página editorial: firma, año, navegación. Mata el vacío
+   del pie y le da un final tipográfico a la página. */
+.colofon {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans);
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.colofon-brand {
+  font-weight: 500;
+  letter-spacing: 3px;
+  color: var(--ink);
+}
+.colofon-links {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 18px;
+}
+.colofon-link {
   font-family: var(--serif);
   font-style: italic;
   font-size: 15px;
+  letter-spacing: 0.3px;
+  text-transform: none;
   color: var(--ink);
   text-decoration: none;
   border-bottom: 1px solid var(--ink);
-  padding: 4px 2px;
+  padding-bottom: 1px;
 }
 .streak {
   font-family: var(--serif);
   font-style: italic;
-  font-size: 12px;
-  color: var(--ink-soft);
+  font-size: 13px;
   letter-spacing: 0.3px;
-  margin-top: 2px;
+  text-transform: none;
+  color: var(--ink-soft);
 }
-body.in-howto .bottombar { display: none; }
+
+/* ────────────────────── POSTAL (540×960) ────────────────────── */
 
 .postal {
   width: 540px;
@@ -528,7 +633,7 @@ body.in-howto .bottombar { display: none; }
   justify-content: space-between;
   align-items: baseline;
   font-family: var(--sans);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--ink);
@@ -551,7 +656,7 @@ body.in-howto .bottombar { display: none; }
 .postal-attrib {
   text-align: center;
   font-family: var(--sans);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 2.5px;
   text-transform: uppercase;
   color: var(--ink);
@@ -574,7 +679,7 @@ body.in-howto .bottombar { display: none; }
   padding-top: 16px;
   border-top: 1px solid var(--rule);
   font-family: var(--sans);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 1.8px;
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -594,6 +699,8 @@ body.in-howto .bottombar { display: none; }
   text-transform: none;
   color: var(--ink);
 }
+
+/* ────────────────────── MODAL DE POSTAL ────────────────────── */
 
 .postal-modal {
   position: fixed;
@@ -670,7 +777,7 @@ body.in-howto .bottombar { display: none; }
 }
 .postal-out {
   font-family: var(--sans);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: rgba(251, 249, 245, 0.7);
@@ -680,10 +787,8 @@ body.in-howto .bottombar { display: none; }
 
 /* ─────────────────── ACCESIBILIDAD: FOCUS VISIBLE ───────────────────
    Anillo editorial sólo cuando el foco viene de teclado o lector de
-   pantalla (no en click de mouse). Color tinta sobre papel; en el modal
-   de postal (fondo oscuro) se invierte a papel sobre tinta.
-   Subimos ink-soft a 0.65 → contraste ~4.9:1 sobre paper, pasa WCAG AA
-   para texto normal. */
+   pantalla (no en click de mouse). Color tinta sobre papel; en los
+   modales (fondo oscuro) se invierte a papel sobre tinta. */
 :focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 3px;
@@ -696,6 +801,8 @@ body.in-howto .bottombar { display: none; }
 :focus:not(:focus-visible) {
   outline: none;
 }
+
+/* ────────────────────── MÓVIL (≤ 720px) ────────────────────── */
 
 @media (max-width: 720px) {
   .stage {
@@ -711,11 +818,11 @@ body.in-howto .bottombar { display: none; }
   .topbar .meta,
   .topbar .meta:last-child {
     text-align: center;
-    font-size: 10.5px;
+    font-size: 11.5px;
     letter-spacing: 1.2px;
   }
   .logo {
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 3px;
   }
   .display {
@@ -724,7 +831,7 @@ body.in-howto .bottombar { display: none; }
     letter-spacing: -0.03em;
     margin: 4px 0 14px;
   }
-  .subtitle { font-size: 14px; }
+  .subtitle { font-size: 14.5px; }
   .fragment-wrap { padding: 20px 0; }
   .fragment {
     font-size: 17px;
@@ -734,17 +841,18 @@ body.in-howto .bottombar { display: none; }
   .letra-slot { margin: 0 0.025em; min-width: 0.5em; }
   .ghost-input { font-size: 18px; }
   .input-hint {
-    font-size: 10.5px;
+    font-size: 11.5px;
     letter-spacing: 2px;
   }
+  .input-meta { gap: 14px; }
   .susurro {
-    font-size: 8.5pt;
+    font-size: 12px;
     letter-spacing: 0.5px;
   }
   .susurro strong { letter-spacing: 1.6px; }
-  .tip { font-size: 12.5px; }
-  .hint-btn { font-size: 14px; }
-  .hint-out { font-size: 13px; }
+  .tip { font-size: 13.5px; }
+  .hint-btn { font-size: 15px; }
+  .hint-out { font-size: 14px; }
   .bottombar {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -752,47 +860,57 @@ body.in-howto .bottombar { display: none; }
   }
   .graveyard {
     text-align: center;
-    font-size: 10.5px;
+    font-size: 12px;
     order: 2;
   }
   .counters {
     justify-content: center;
     flex-wrap: wrap;
     row-gap: 4px;
-    font-size: 10.5px;
+    font-size: 11.5px;
     letter-spacing: 1.4px;
     order: 1;
   }
-  .litlapse-author { font-size: 10.5px; letter-spacing: 2.2px; }
+  .litlapse-author { font-size: 11.5px; letter-spacing: 2.2px; }
   .litlapse-work { font-size: 14px; }
   .share-btn { font-size: 16px; }
   .share-btn--secondary { font-size: 13px; margin-left: 0; }
   .win-actions { display: flex; flex-direction: column; gap: 14px; align-items: center; }
-  .share-out { font-size: 10px; letter-spacing: 1.2px; }
+  .share-out { font-size: 11px; letter-spacing: 1.2px; }
   .postal-modal { padding: 16px; }
   .postal-modal-inner { gap: 14px; }
   .postal-action-btn { font-size: 16px; }
   .postal-close { font-size: 13px; }
-  .screen-howto .display { font-size: clamp(36px, 11vw, 56px); }
-  .howto-steps {
-    grid-template-columns: 1fr;
-    gap: 22px;
-    margin: 22px 0 26px;
+  .howto-modal { padding: 16px; }
+  .howto-panel {
+    padding: 28px 24px 24px;
+    max-height: 88vh;
   }
+  .howto-title { font-size: clamp(28px, 8vw, 36px); }
+  .howto-sub { font-size: 15px; margin-bottom: 18px; }
+  .howto-steps { gap: 14px; }
   .howto-step {
-    grid-template-columns: 36px 1fr;
-    gap: 12px;
+    grid-template-columns: 30px 1fr;
+    gap: 10px;
     padding-top: 12px;
   }
-  .howto-num { font-size: 22px; }
+  .howto-num { font-size: 20px; }
   .howto-body p { font-size: 15px; line-height: 1.55; }
-  .howto-back-link { font-size: 15px; }
+  .howto-close { font-size: 15px; }
   .counters-block { align-items: center; gap: 10px; }
-  .howto-link { font-size: 14px; padding: 5px 2px; }
-  .streak { font-size: 11px; }
   .word-tabs { font-size: 13px; }
   .word-tab { font-size: 15px; padding: 8px 10px; min-width: 32px; }
-  .word-tabs-label { font-size: 9.5px; margin-right: 6px; }
+  .word-tabs-label { font-size: 10.5px; margin-right: 6px; }
+  .colofon {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    font-size: 11.5px;
+  }
+  .colofon-links { gap: 14px; }
+  .colofon-link { font-size: 14.5px; }
+  .streak { font-size: 12.5px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -803,8 +921,11 @@ body.in-howto .bottombar { display: none; }
   .susurro strong span,
   .tip,
   .fragment-win,
+  .hint-btn.se-ofrece,
   .postal-modal,
-  .postal-modal-inner {
+  .postal-modal-inner,
+  .howto-modal,
+  .howto-panel {
     animation: none !important;
     transition: none !important;
   }
