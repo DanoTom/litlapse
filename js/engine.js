@@ -3,7 +3,7 @@
  * --------------------------------------------------------------
  * Motor de presentación. Render del fragmento como casilleros de
  * letras (slots), conexión con el estado deductivo, modal de postal,
- * pantalla "cómo se juega" y onboarding inline.
+ * modal "cómo se juega", cabecera dinámica y onboarding inline.
  * --------------------------------------------------------------
  */
 (function (global) {
@@ -17,6 +17,17 @@
     if (typeof n !== 'number' || n < 1 || n > 39) return String(n);
     const tabla = [['XXX', 30], ['XX', 20], ['X', 10], ['IX', 9],
                    ['V', 5], ['IV', 4], ['I', 1]];
+    let r = '';
+    for (const [s, v] of tabla) { while (n >= v) { r += s; n -= v; } }
+    return r;
+  }
+
+  /** Romanos para años (1–3999): MMXXVI, MCMXCVII, etc. */
+  function _aRomanoAnio(n) {
+    if (typeof n !== 'number' || n < 1 || n > 3999) return String(n);
+    const tabla = [['M', 1000], ['CM', 900], ['D', 500], ['CD', 400],
+                   ['C', 100], ['XC', 90], ['L', 50], ['XL', 40],
+                   ['X', 10], ['IX', 9], ['V', 5], ['IV', 4], ['I', 1]];
     let r = '';
     for (const [s, v] of tabla) { while (n >= v) { r += s; n -= v; } }
     return r;
@@ -47,10 +58,12 @@
 
       this._fijadasFrescas = new Map();
       this._postalDataUrl = null;
+      this._pistasVistas = new Set();
       this.state.onChange = () => this.render();
 
       this._enlazarEventos();
       this._ajustarInputAlSlot();
+      this._renderCabecera();
       this.render();
       this._mostrarTipInicial();
       this._enfocarInput();
@@ -78,7 +91,7 @@
         screenPlay: $('[data-litlapse="screen-play"]'),
         screenWin: $('[data-litlapse="screen-win"]'),
         screenLose: $('[data-litlapse="screen-lose"]'),
-        screenHowto: $('[data-litlapse="screen-howto"]'),
+        howtoModal: $('[data-litlapse="howto-modal"]'),
         howtoLink: $('[data-litlapse="howto-link"]'),
         howtoBack: $('[data-litlapse="howto-back"]'),
         attribution: $('[data-litlapse="attribution"]'),
@@ -90,7 +103,10 @@
         postalCloseBtn: $('[data-litlapse="postal-close-btn"]'),
         postalOut: $('[data-litlapse="postal-out"]'),
         tipInput: $('[data-litlapse="tip-input"]'),
-        streak: $('[data-litlapse="streak"]')
+        streak: $('[data-litlapse="streak"]'),
+        edition: $('[data-litlapse="edition"]'),
+        dateEl: $('[data-litlapse="date"]'),
+        anno: $('[data-litlapse="anno"]')
       };
     }
 
@@ -150,7 +166,7 @@
         });
       }
 
-      const { howtoLink, howtoBack, screenHowto } = this.els;
+      const { howtoLink, howtoBack, howtoModal } = this.els;
       if (howtoLink) {
         howtoLink.addEventListener('click', (e) => {
           e.preventDefault();
@@ -163,12 +179,17 @@
           this._cerrarHowto();
         });
       }
+      if (howtoModal) {
+        howtoModal.addEventListener('click', (e) => {
+          if (e.target === howtoModal) this._cerrarHowto();
+        });
+      }
 
       this.root.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
         if (postalModal && !postalModal.hidden) {
           this._cerrarPostal();
-        } else if (screenHowto && !screenHowto.hidden) {
+        } else if (howtoModal && !howtoModal.hidden) {
           this._cerrarHowto();
         }
       });
@@ -226,23 +247,38 @@
       return bestDist < 80 ? best : null;
     }
 
+    // ──────────────────────────── cabecera dinámica ──
+
+    /**
+     * Edición y fecha salen del puzzle del día, nunca hardcodeadas.
+     * "Edición №07 · MMXXVI"  /  "10 · 06 · 26"  /  colofón "MMXXVI".
+     */
+    _renderCabecera() {
+      const { edition, dateEl, anno } = this.els;
+      const id = String(this.puzzle.id).padStart(2, '0');
+      const m = String(this.puzzle.fecha || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      const anio = m ? Number(m[1]) : new Date().getFullYear();
+      const romano = _aRomanoAnio(anio);
+      if (edition) edition.textContent = `Edición №${id} · ${romano}`;
+      if (dateEl && m) dateEl.textContent = `${m[3]} · ${m[2]} · ${m[1].slice(2)}`;
+      if (anno) anno.textContent = romano;
+    }
+
+    // ──────────────────────────── cómo se juega (modal) ──
+
     _abrirHowto() {
-      const { screenHowto, screenPlay, screenWin, screenLose } = this.els;
-      if (!screenHowto) return;
-      if (screenPlay) screenPlay.hidden = true;
-      if (screenWin) screenWin.hidden = true;
-      if (screenLose) screenLose.hidden = true;
-      screenHowto.hidden = false;
-      global.document.body.classList.add('in-howto');
-      global.scrollTo(0, 0);
+      const modal = this.els.howtoModal;
+      if (!modal) return;
+      modal.hidden = false;
+      global.document.body.style.overflow = 'hidden';
     }
 
     _cerrarHowto() {
-      const { screenHowto } = this.els;
-      if (!screenHowto) return;
-      screenHowto.hidden = true;
-      global.document.body.classList.remove('in-howto');
-      this.render();
+      const modal = this.els.howtoModal;
+      if (!modal) return;
+      modal.hidden = true;
+      global.document.body.style.overflow = '';
+      this._enfocarInput();
     }
 
     _procesarEntrada() {
@@ -335,6 +371,10 @@
       if (this.state.terminada) return;
       const pista = this.state.pedirPista(this.modoPista);
       if (!pista || !this.els.hintOut) return;
+      // Marca esta palabra como "pista vista" para que la auto-oferta
+      // no vuelva a insistir sobre ella.
+      this._pistasVistas.add(this.state.activeIndex);
+      if (this.els.hintBtn) this.els.hintBtn.classList.remove('se-ofrece');
       const out = this.els.hintOut;
       out.textContent = pista.modo === 'inicial'
         ? `Comienza con la letra «${pista.contenido}».`
@@ -437,7 +477,7 @@
         if (preview && modal && !modal.hidden) {
           preview.classList.add('has-img');
           preview.innerHTML =
-            `<img src="${dataUrl}" alt="Postal del eclipse de hoy" draggable="false" />`;
+            `<img src="${dataUrl}" alt="Postal de la edición de hoy" draggable="false" />`;
         }
       } catch (_e) {
         // Silent: el preview HTML queda visible y el botón share regenera
@@ -469,7 +509,7 @@
               try {
                 await nav.share({
                   files: [file],
-                  title: `Litlapse — Día #${this.puzzle.id}`
+                  title: `Litlapse — Edición №${this.puzzle.id}`
                 });
                 setOut('');
                 return;
@@ -541,7 +581,7 @@
           `<em>${Utils.escapeHtml(this.puzzle.obra)} · ${Utils.escapeHtml(this.puzzle['año'])}</em>`,
         `</div>`,
         `<div class="postal-foot">`,
-          `<span>Litlapse #${this.puzzle.id} · resuelto en ${intentoStr}</span>`,
+          `<span>Edición №${idStr} · restaurada en ${intentoStr}</span>`,
           `<span class="postal-seal">L</span>`,
         `</div>`
       ].join('');
@@ -556,11 +596,28 @@
       this._renderCementerio();
       this._renderContadores();
       this._renderWordTabs();
+      this._renderPistaOferta();
       this._renderAtribucion();
       this._renderBotonesEstado();
       this._actualizarStreak();
       this._ajustarInputAlSlot();
       this._fijadasFrescas = new Map();
+    }
+
+    /**
+     * Auto-oferta de pista: tras 3 intentos en la palabra activa sin
+     * resolverla y sin haber pedido pista para ella, el botón se insinúa
+     * con un pulso suave (clase CSS). Una sola vez por palabra.
+     */
+    _renderPistaOferta() {
+      const btn = this.els.hintBtn;
+      if (!btn) return;
+      const slot = this.state.slotActivo;
+      const ofrecer = !!slot
+        && !this.state.terminada
+        && slot.intentos >= 3
+        && !this._pistasVistas.has(this.state.activeIndex);
+      btn.classList.toggle('se-ofrece', ofrecer);
     }
 
     _renderWordTabs() {
@@ -590,8 +647,7 @@
     }
 
     _renderPantalla() {
-      const { screenHowto, screenPlay, screenWin, screenLose } = this.els;
-      if (screenHowto && !screenHowto.hidden) return;
+      const { screenPlay, screenWin, screenLose } = this.els;
       const s = this.state.status;
       const toggle = (el, on) => {
         if (!el) return;
@@ -765,7 +821,7 @@
       }
     }
 
-    // ──────────────────────────── eclipses resueltos ──
+    // ──────────────────────────── ediciones restauradas ──
 
     _actualizarStreak() {
       const el = this.els.streak;
@@ -783,8 +839,8 @@
       const n = lista.length;
       el.hidden = false;
       el.textContent = n === 1
-        ? '1 eclipse resuelto'
-        : `${_aRomano(n)} eclipses resueltos`;
+        ? '1 edición restaurada'
+        : `${_aRomano(n)} ediciones restauradas`;
     }
   }
 
