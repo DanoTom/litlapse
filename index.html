@@ -9,8 +9,8 @@
   <meta name="format-detection" content="telephone=no" />
 
   <!-- Identidad y rastreo -->
-  <title>Litlapse — el eclipse literario de hoy</title>
-  <meta name="description" content="Un eclipse al día: tres palabras ocultas en un fragmento de la literatura universal. Restaurá el verso y guardá una postal del autor." />
+  <title>Litlapse — la edición de hoy</title>
+  <meta name="description" content="Una edición al día: tres palabras en elipsis dentro de un fragmento de la literatura universal. Restaurá el verso y guardá la postal del autor." />
   <meta name="author" content="Litlapse" />
   <link rel="canonical" href="https://danotom.github.io/litlapse/" />
 
@@ -24,21 +24,21 @@
   <!-- Open Graph (Facebook, WhatsApp, LinkedIn, Discord, Slack…) -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Litlapse" />
-  <meta property="og:title" content="Litlapse — el eclipse literario de hoy" />
-  <meta property="og:description" content="Un eclipse al día: tres palabras ocultas en un fragmento de la literatura universal. Restaurá el verso." />
+  <meta property="og:title" content="Litlapse — la edición de hoy" />
+  <meta property="og:description" content="Una edición al día: tres palabras en elipsis dentro de un fragmento de la literatura universal. Restaurá el verso." />
   <meta property="og:url" content="https://danotom.github.io/litlapse/" />
   <meta property="og:image" content="https://danotom.github.io/litlapse/og.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Litlapse — el eclipse literario de hoy. Un fragmento con tres palabras en elipsis sobre papel envejecido." />
+  <meta property="og:image:alt" content="Litlapse — la edición literaria de hoy. Un fragmento con tres palabras en elipsis sobre papel envejecido." />
   <meta property="og:locale" content="es_ES" />
 
   <!-- Twitter / X -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Litlapse — el eclipse literario de hoy" />
-  <meta name="twitter:description" content="Un eclipse al día: tres palabras ocultas en un fragmento de la literatura universal. Restaurá el verso." />
+  <meta name="twitter:title" content="Litlapse — la edición de hoy" />
+  <meta name="twitter:description" content="Una edición al día: tres palabras en elipsis dentro de un fragmento de la literatura universal. Restaurá el verso." />
   <meta name="twitter:image" content="https://danotom.github.io/litlapse/og.png" />
-  <meta name="twitter:image:alt" content="Litlapse — el eclipse literario de hoy." />
+  <meta name="twitter:image:alt" content="Litlapse — la edición literaria de hoy." />
 
   <!-- Schema.org: datos estructurados para buscadores -->
   <script type="application/ld+json">
@@ -46,8 +46,8 @@
     "@context": "https://schema.org",
     "@type": "Game",
     "name": "Litlapse",
-    "alternateName": "Litlapse — el eclipse literario diario",
-    "description": "Un eclipse al día: tres palabras ocultas en un fragmento de la literatura universal. Restaurá el verso y guardá una postal del autor.",
+    "alternateName": "Litlapse — la edición literaria diaria",
+    "description": "Una edición al día: tres palabras en elipsis dentro de un fragmento de la literatura universal. Restaurá el verso y guardá la postal del autor.",
     "url": "https://danotom.github.io/litlapse/",
     "image": "https://danotom.github.io/litlapse/og.png",
     "inLanguage": "es",
@@ -69,9 +69,9 @@
 <body>
   <main class="stage">
     <header class="topbar">
-      <span class="meta">Edición №01 · MMXXVI</span>
+      <span class="meta" data-litlapse="edition">Edición №— · MMXXVI</span>
       <span class="logo">L I T L A P S E</span>
-      <span class="meta" id="topbar-date">04 · 06 · 26</span>
+      <span class="meta" data-litlapse="date" id="topbar-date">— · — · —</span>
     </header>
     <hr class="rule" />
 
@@ -81,7 +81,7 @@
         Tres<br />palabras<br /><em>en elipsis.</em>
       </h1>
       <hr class="rule" />
-      <p class="subtitle"><em>El eclipse de hoy — completa la página, restaura el verso.</em></p>
+      <p class="subtitle"><em>La edición de hoy — completá la página, restaurá el verso.</em></p>
 
       <article class="fragment-wrap">
         <p data-litlapse="fragment" class="fragment"></p>
@@ -99,7 +99,10 @@
           aria-label="Escribe la palabra que falta"
           maxlength="40"
         />
-        <span class="input-hint">tu palabra · ↵</span>
+        <div class="input-meta">
+          <span class="input-hint">tu palabra · ↵</span>
+          <button data-litlapse="hint-btn" class="hint-btn" type="button">¿pista?</button>
+        </div>
       </form>
 
       <p data-litlapse="tip-input" class="tip" hidden>
@@ -107,16 +110,12 @@
       </p>
 
       <p data-litlapse="susurro" class="susurro" role="status" aria-live="polite"></p>
-
-      <div class="aux">
-        <button data-litlapse="hint-btn" class="hint-btn" type="button">¿pista?</button>
-        <p data-litlapse="hint-out" class="hint-out" role="status" aria-live="polite"></p>
-      </div>
+      <p data-litlapse="hint-out" class="hint-out" role="status" aria-live="polite"></p>
     </section>
 
     <!-- ───────── pantalla victoria ───────── -->
     <section data-litlapse="screen-win" class="screen screen-win" hidden>
-      <h1 class="display">Eclipse resuelto.</h1>
+      <h1 class="display">Edición restaurada.</h1>
       <article class="fragment-wrap">
         <p data-litlapse="fragment" class="fragment fragment-win"></p>
       </article>
@@ -130,72 +129,12 @@
 
     <!-- ───────── pantalla derrota ───────── -->
     <section data-litlapse="screen-lose" class="screen screen-lose" hidden>
-      <h1 class="display">El eclipse se cierra.</h1>
-      <p class="subtitle"><em>Las palabras eran éstas. Vuelve mañana al próximo fragmento.</em></p>
+      <h1 class="display">La edición se cierra.</h1>
+      <p class="subtitle"><em>Las palabras eran éstas. Volvé mañana a la próxima edición.</em></p>
       <article class="fragment-wrap">
         <p data-litlapse="fragment" class="fragment fragment-lose"></p>
       </article>
       <div data-litlapse="attribution" class="attribution"></div>
-    </section>
-
-    <!-- ───────── pantalla cómo se juega ───────── -->
-    <section data-litlapse="screen-howto" class="screen screen-howto" hidden>
-      <h1 class="display">Cómo<br /><em>se juega.</em></h1>
-      <p class="subtitle"><em>Un eclipse al día, tres elipsis ocultas y una sola regla: leer despacio.</em></p>
-
-      <ol class="howto-steps">
-        <li class="howto-step">
-          <span class="howto-num">I</span>
-          <div class="howto-body">
-            <h4>El fragmento</h4>
-            <p>Cada día publicamos un texto de la literatura universal. Tres de sus palabras quedan en elipsis: una hilera de guiones bajos del largo exacto de cada palabra. La primera letra de cada una aparece ya escrita, como pista de cortesía.</p>
-          </div>
-        </li>
-
-        <li class="howto-step">
-          <span class="howto-num">II</span>
-          <div class="howto-body">
-            <h4>La elipsis activa</h4>
-            <p>Sólo una palabra está en juego a la vez. La reconocés por el pulso suave de sus casillas vacías. Escribís dentro del input de abajo, nunca sobre el texto.</p>
-          </div>
-        </li>
-
-        <li class="howto-step">
-          <span class="howto-num">III</span>
-          <div class="howto-body">
-            <h4>Tu intento</h4>
-            <p>Escribís una palabra que tenga la misma cantidad de letras que la oculta y pulsás <em>Enter</em>. Si no coincide en longitud, no cuenta como intento — el input se sacude para avisarte.</p>
-          </div>
-        </li>
-
-        <li class="howto-step">
-          <span class="howto-num">IV</span>
-          <div class="howto-body">
-            <h4>Letras que se fijan</h4>
-            <p>Cada letra que coincide en posición exacta se asienta sobre su guion bajo y se queda ahí, intento tras intento. Cuando todas las casillas están llenas, la palabra queda resuelta y el foco salta a la siguiente.</p>
-          </div>
-        </li>
-
-        <li class="howto-step">
-          <span class="howto-num">V</span>
-          <div class="howto-body">
-            <h4>El susurro y el cementerio</h4>
-            <p>Las letras que aparecen en otra posición se acumulan en una línea discreta debajo del input — <em>Contiene: A, E</em>. Las palabras incorrectas caen al cementerio en cursiva tachada; las letras que no existen en la palabra activa se ven al 15% para descartarlas de un vistazo.</p>
-          </div>
-        </li>
-
-        <li class="howto-step">
-          <span class="howto-num">VI</span>
-          <div class="howto-body">
-            <h4>Seis intentos, una postal</h4>
-            <p>Tenés seis intentos por cada palabra. Si los gastás sin completarla, el eclipse se cierra hasta mañana. Si resolvés las tres, recibís una postal con el verso completo y la firma del autor.</p>
-          </div>
-        </li>
-      </ol>
-
-      <p class="howto-back">
-        <a href="#" data-litlapse="howto-back" class="howto-back-link">← volver al fragmento de hoy</a>
-      </p>
     </section>
 
     <hr class="rule" />
@@ -210,13 +149,22 @@
           <span>·</span>
           <span><strong data-litlapse="word-attempts">0/6</strong> en esta palabra</span>
         </div>
-        <a href="#" data-litlapse="howto-link" class="howto-link">cómo se juega</a>
       </div>
     </footer>
+
+    <!-- Colofón editorial: cierre de página con firma y navegación. -->
+    <div class="colofon">
+      <span class="colofon-brand">L I T L A P S E</span>
+      <span class="colofon-line">un fragmento al día · <span data-litlapse="anno">MMXXVI</span></span>
+      <span class="colofon-links">
+        <span data-litlapse="streak" class="streak" hidden></span>
+        <a href="#" data-litlapse="howto-link" class="colofon-link">cómo se juega</a>
+      </span>
+    </div>
   </main>
 
   <!-- ───────── modal de postal (sólo visible en victoria) ───────── -->
-  <div data-litlapse="postal-modal" class="postal-modal" hidden role="dialog" aria-modal="true" aria-label="Postal del eclipse">
+  <div data-litlapse="postal-modal" class="postal-modal" hidden role="dialog" aria-modal="true" aria-label="Postal de la edición">
     <div class="postal-modal-inner">
       <div data-litlapse="postal-stage" class="postal-stage">
         <div data-litlapse="postal-wrap" class="postal-wrap">
@@ -231,8 +179,51 @@
     </div>
   </div>
 
-  <!-- Postal espejo, fuera de pantalla, sólo para captura a PNG a su tamaño nativo. -->
-  <div data-litlapse="postal-capture" class="postal postal-capture" aria-hidden="true"></div>
+  <!-- ───────── modal "cómo se juega" ───────── -->
+  <div data-litlapse="howto-modal" class="howto-modal" hidden role="dialog" aria-modal="true" aria-label="Cómo se juega">
+    <div class="howto-panel">
+      <h2 class="howto-title">Cómo <em>se juega.</em></h2>
+      <p class="howto-sub"><em>Una edición al día, tres palabras en elipsis.</em></p>
+
+      <ol class="howto-steps">
+        <li class="howto-step">
+          <span class="howto-num">I</span>
+          <div class="howto-body">
+            <h4>La elipsis</h4>
+            <p>Cada día, un fragmento de la literatura universal esconde tres palabras. Cada una aparece como casillas vacías, con la primera letra ya escrita de regalo.</p>
+          </div>
+        </li>
+
+        <li class="howto-step">
+          <span class="howto-num">II</span>
+          <div class="howto-body">
+            <h4>Tu intento</h4>
+            <p>Escribí una palabra del mismo largo y pulsá <em>Enter</em>. Las letras que coinciden en posición se fijan para siempre; las que están en otro lugar aparecen abajo — <em>Contiene: A, E</em>.</p>
+          </div>
+        </li>
+
+        <li class="howto-step">
+          <span class="howto-num">III</span>
+          <div class="howto-body">
+            <h4>Elegí tu palabra</h4>
+            <p>Tocá cualquier elipsis del texto — o las cifras <em>I · II · III</em> del pie — para atacar la palabra que prefieras. La pista, junto al casillero, te regala la definición.</p>
+          </div>
+        </li>
+
+        <li class="howto-step">
+          <span class="howto-num">IV</span>
+          <div class="howto-body">
+            <h4>Seis intentos por palabra</h4>
+            <p>Si se agotan, la edición se cierra hasta mañana. Si restaurás las tres, te llevás la postal del verso con la firma del autor.</p>
+          </div>
+        </li>
+      </ol>
+
+      <p class="howto-foot">
+        <button data-litlapse="howto-back" class="howto-close" type="button">entendido — al fragmento</button>
+      </p>
+    </div>
+  </div>
 
   <!-- orden estricto de dependencias -->
   <script src="js/puzzles.js"></script>

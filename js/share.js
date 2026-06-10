@@ -5,8 +5,8 @@
  *
  *  - `build(puzzle, snapshot)` arma el texto plano (estilo Wordle):
  *
- *        Litlapse — Día #1
- *        04·06·26 · resuelto en 4 intentos · sin pistas
+ *        Litlapse — Edición №7
+ *        10·06·26 · restaurada en 4 intentos · sin pistas
  *        litlapse.com
  *
  *    Sin teaser del fragmento — no spoilea a quien no jugó hoy.
@@ -54,8 +54,8 @@
     const intentoStr = `${intentos} intento${intentos === 1 ? '' : 's'}`;
 
     return [
-      `Litlapse — Día #${puzzle.id}`,
-      `${fecha} · resuelto en ${intentoStr} · ${pistas}`,
+      `Litlapse — Edición №${puzzle.id}`,
+      `${fecha} · restaurada en ${intentoStr} · ${pistas}`,
       DOMINIO
     ].join('\n');
   }
@@ -111,7 +111,7 @@
       return { ok: false, motivo: 'no se pudo generar la imagen' };
     }
 
-    const nombre = `litlapse-${puzzle && puzzle.id ? puzzle.id : 'eclipse'}.png`;
+    const nombre = `litlapse-${puzzle && puzzle.id ? puzzle.id : 'edicion'}.png`;
 
     // Intentar share nativo con archivo (mobile principalmente).
     try {
@@ -122,7 +122,7 @@
         try {
           await nav.share({
             files: [file],
-            title: `Litlapse — Día #${puzzle && puzzle.id}`
+            title: `Litlapse — Edición №${puzzle && puzzle.id}`
           });
           return { ok: true, modo: 'share' };
         } catch (_e) {
